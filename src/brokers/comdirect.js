@@ -1,8 +1,8 @@
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
-import every from 'lodash/every'
-import values from 'lodash/values'
-import Big from 'big.js'
+import every from 'lodash/every';
+import values from 'lodash/values';
+import Big from 'big.js';
 
 const parseGermanNum = n => {
   return parseFloat(n.replace(/\./g, '').replace(',', '.'));
@@ -73,8 +73,8 @@ const findFee = textArr => {
     textArr[textArr.findIndex(t => t.includes('Zu Ihren')) + 1];
   const totalCost = totalCostLine.split('EUR').pop().trim();
 
-  const diff = +(Big(parseGermanNum(totalCost)).minus(Big(amount)))
-  return Math.abs(diff)
+  const diff = +(Big(parseGermanNum(totalCost)).minus(Big(amount)));
+  return Math.abs(diff);
 };
 
 const isBuy = textArr => textArr.some(t => t.includes('Wertpapierkauf'));
@@ -119,8 +119,6 @@ export const parseData = textArr => {
     price = +(Big(amount).div(Big(shares)));
     fee = 0;
   }
-
-  console.log(fee)
 
   const activity = {
     broker: 'comdirect',

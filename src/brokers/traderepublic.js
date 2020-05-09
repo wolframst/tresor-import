@@ -2,7 +2,7 @@ import format from "date-fns/format";
 import parse from "date-fns/parse";
 import every from "lodash/every";
 import values from "lodash/values";
-import Big from 'big.js'
+import Big from 'big.js';
 
 const parseGermanNum = (n) => {
   return parseFloat(n.replace(/\./g, "").replace(",", "."));
