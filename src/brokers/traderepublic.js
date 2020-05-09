@@ -1,7 +1,8 @@
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import every from 'lodash/every';
-import values from 'lodash/values';
+import format from "date-fns/format";
+import parse from "date-fns/parse";
+import every from "lodash/every";
+import values from "lodash/values";
+import Big from 'big.js'
 
 const parseGermanNum = (n) => {
   return parseFloat(n.replace(/\./g, "").replace(",", "."));
@@ -92,14 +93,14 @@ const findFee = (textArr) => {
 };
 
 const findTax = (textArr) => {
-  var totalTax = 0.0;
+  var totalTax = Big(0);
 
   if (textArr.lastIndexOf("Kapitalertragssteuer") != -1) {
     const taxPositionLine =
       textArr[textArr.lastIndexOf("Kapitalertragssteuer") + 1];
     const taxPositionString = taxPositionLine.split(" EUR")[0];
     const taxPositionAmount = Math.abs(parseGermanNum(taxPositionString));
-    totalTax += taxPositionAmount;
+    totalTax = totalTax.plus(Big(taxPositionAmount));
   }
 
   if (textArr.lastIndexOf("Solidaritätszuschlag") != -1) {
@@ -107,16 +108,16 @@ const findTax = (textArr) => {
       textArr[textArr.lastIndexOf("Solidaritätszuschlag") + 1];
     const taxPositionString = taxPositionLine.split(" EUR")[0];
     const taxPositionAmount = Math.abs(parseGermanNum(taxPositionString));
-    totalTax += taxPositionAmount;
+    totalTax = totalTax.plus(Big(taxPositionAmount));
   }
 
   if (textArr.lastIndexOf("Kirchensteuer") != -1) {
     const taxPositionLine = textArr[textArr.lastIndexOf("Kirchensteuer") + 1];
     const taxPositionString = taxPositionLine.split(" EUR")[0];
     const taxPositionAmount = Math.abs(parseGermanNum(taxPositionString));
-    totalTax += taxPositionAmount;
+    totalTax = totalTax.plus(Big(taxPositionAmount));
   }
-  return totalTax;
+  return +totalTax;
 };
 
 const isBuySingle = (textArr) => textArr.some((t) => t.includes("Kauf am"));
@@ -143,12 +144,10 @@ export const parseData = textArr => {
     type = "Buy";
     isin = findISIN(textArr);
     company = findCompany(textArr);
-    date = isBuySavingsPlan(textArr)
-      ? findDateBuySavingsPlan(textArr)
-      : findDateSingleBuy(textArr);
+    date = isBuySavingsPlan(textArr) ? findDateBuySavingsPlan(textArr) : findDateSingleBuy(textArr);
     shares = findShares(textArr);
     amount = findAmountBuy(textArr);
-    price = amount / shares;
+    price = +(Big(amount).div(Big(shares)));
     fee = findFee(textArr);
     tax = 0;
   } else if (isSell(textArr)) {
@@ -158,7 +157,7 @@ export const parseData = textArr => {
     date = findDateSell(textArr);
     shares = findShares(textArr);
     amount = findAmountSell(textArr);
-    price = amount / shares;
+    price = +(Big(amount).div(Big(shares)));
     fee = findFee(textArr);
     tax = findTax(textArr);
   } else if (isDividend(textArr)) {
@@ -168,7 +167,7 @@ export const parseData = textArr => {
     date = findDateDividend(textArr);
     shares = findShares(textArr);
     amount = findPayout(textArr);
-    price = amount / shares;
+    price = +(Big(amount).div(Big(shares)));
     fee = 0;
     tax = findTax(textArr);
   } else {
