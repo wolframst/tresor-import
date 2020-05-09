@@ -5,8 +5,10 @@ import * as brokers from './brokers';
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 const getActivity = contents => {
+  // identify broker from first page
   const broker = getBroker(contents[0]);
 
+  // get activities from all pages
   return broker.parsePages(contents);
 };
 
@@ -27,6 +29,7 @@ export const getBroker = textArr => {
 };
 
 const parsePage = async page => {
+  // extract content of page as an array of strings
   let textArr;
 
   const tc = await page.getTextContent();
@@ -43,7 +46,6 @@ const parsePage = async page => {
 export const extractActivities = async e => {
   const result = new Uint8Array(e.currentTarget.result);
   const pdf = await pdfjs.getDocument(result).promise;
-  console.log('Pages', pdf.numPages);
 
   // get contents of all pages as array of textArrays
   const contents = [];
@@ -56,6 +58,7 @@ export const extractActivities = async e => {
     contents.push(textArr);
   }
 
+  // get activities out of entire PDF (all pages)
   let activities = [];
 
   try {
