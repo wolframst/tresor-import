@@ -120,6 +120,8 @@ export const parseData = textArr => {
     fee = 0;
   }
 
+  console.log(fee)
+
   const activity = {
     broker: 'comdirect',
     type,
