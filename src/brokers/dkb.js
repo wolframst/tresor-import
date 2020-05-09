@@ -127,3 +127,9 @@ export const parseData = textArr => {
     return activity;
   }
 };
+
+export const parsePages = contents => {
+  // parse first page
+  const activity = parseData(contents[0])
+  return [activity];
+}

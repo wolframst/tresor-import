@@ -4,10 +4,10 @@ import * as brokers from './brokers';
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
-const getActivity = textArr => {
-  const broker = getBroker(textArr);
+const getActivity = contents => {
+  const broker = getBroker(contents[0]);
 
-  return broker.parseData(textArr);
+  return broker.parsePages(contents);
 };
 
 export const getBroker = textArr => {
@@ -26,13 +26,9 @@ export const getBroker = textArr => {
   return supportedBrokers[0];
 };
 
-export const extractActivity = async e => {
-  let activity;
+const parsePage = async (page) => {
   let textArr;
 
-  const result = new Uint8Array(e.currentTarget.result);
-  const pdf = await pdfjs.getDocument(result).promise;
-  const page = await pdf.getPage(1);
   const tc = await page.getTextContent();
 
   var out = [];
@@ -40,17 +36,33 @@ export const extractActivity = async e => {
     out.push(c.str.trim());
   }
   textArr = out.filter(i => i.length > 0);
-  console.log(textArr);
+
+  return textArr
+}
+
+export const extractActivities = async e => {
+  const result = new Uint8Array(e.currentTarget.result);
+  const pdf = await pdfjs.getDocument(result).promise;
+  console.log('Pages', pdf.numPages)
+
+  // get contents of all pages as array of textArrays
+  const contents = [];
+  const loopHelper = Array.from(Array(pdf.numPages)).entries();
+
+  for (const [i] of loopHelper) {
+    const pageNum = i + 1;
+    const page = await pdf.getPage(pageNum)
+    const textArr = await parsePage(page)
+    contents.push(textArr)
+  }
+
+  let activities = [];
 
   try {
-    activity = getActivity(textArr);
+    activities = getActivity(contents);
   } catch (error) {
     console.error(error);
   }
 
-  if (!activity) {
-    activity = { parserError: true };
-  }
-
-  return activity;
+  return activities;
 };
