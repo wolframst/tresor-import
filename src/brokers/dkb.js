@@ -130,6 +130,6 @@ export const parseData = textArr => {
 
 export const parsePages = contents => {
   // parse first page
-  const activity = parseData(contents[0])
+  const activity = parseData(contents[0]);
   return [activity];
-}
+};

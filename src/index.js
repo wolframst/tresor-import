@@ -26,7 +26,7 @@ export const getBroker = textArr => {
   return supportedBrokers[0];
 };
 
-const parsePage = async (page) => {
+const parsePage = async page => {
   let textArr;
 
   const tc = await page.getTextContent();
@@ -37,13 +37,13 @@ const parsePage = async (page) => {
   }
   textArr = out.filter(i => i.length > 0);
 
-  return textArr
-}
+  return textArr;
+};
 
 export const extractActivities = async e => {
   const result = new Uint8Array(e.currentTarget.result);
   const pdf = await pdfjs.getDocument(result).promise;
-  console.log('Pages', pdf.numPages)
+  console.log('Pages', pdf.numPages);
 
   // get contents of all pages as array of textArrays
   const contents = [];
@@ -51,9 +51,9 @@ export const extractActivities = async e => {
 
   for (const [i] of loopHelper) {
     const pageNum = i + 1;
-    const page = await pdf.getPage(pageNum)
-    const textArr = await parsePage(page)
-    contents.push(textArr)
+    const page = await pdf.getPage(pageNum);
+    const textArr = await parsePage(page);
+    contents.push(textArr);
   }
 
   let activities = [];

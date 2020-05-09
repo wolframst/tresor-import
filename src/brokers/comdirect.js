@@ -16,7 +16,10 @@ const findISIN = (text, span) => {
 const findCompany = (text, span) => {
   const companyLine = text[text.findIndex(t => t.includes('/ISIN')) + span];
   // span = 2 means its a dividend PDF - dividends dont have the WKN in the same line
-  const company = span === 2 ? companyLine.trim() : companyLine.substr(0, companyLine.length - 6).trim();
+  const company =
+    span === 2
+      ? companyLine.trim()
+      : companyLine.substr(0, companyLine.length - 6).trim();
 
   return company;
 };
@@ -143,6 +146,6 @@ export const parseData = textArr => {
 
 export const parsePages = contents => {
   // parse first page
-  const activity = parseData(contents[0])
+  const activity = parseData(contents[0]);
   return [activity];
-}
+};
