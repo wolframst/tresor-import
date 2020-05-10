@@ -196,3 +196,9 @@ export const parseData = textArr => {
     return activity;
   }
 };
+
+export const parsePages = contents => {
+  // trade republic only has one-page PDFs
+  const activity = parseData(contents[0]);
+  return [activity];
+};

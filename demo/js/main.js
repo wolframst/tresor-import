@@ -2,7 +2,7 @@ import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import parse from 'date-fns/parse';
 import { de } from 'date-fns/locale';
 
-import { extractActivity } from '../../src';
+import { extractActivities } from '../../src';
 
 new Vue({
   el: '#app',
@@ -51,22 +51,24 @@ new Vue({
       files.map(this.createActivityFromPDF);
     },
     async createActivityFromPDF(file) {
-      let activity;
+      let activities;
       var fileReader = new FileReader();
       fileReader.onload = async e => {
-        activity = await extractActivity(e);
+        activities = await extractActivities(e);
 
-        const a = {
-          ...activity,
-          filename: file.name,
-          parsed: true,
-        };
+        activities.map(activity => {
+          const a = {
+            ...activity,
+            filename: file.name,
+            parsed: true,
+          };
 
-        console.log(a);
-        this.activities.push(a);
+          console.log(a);
+          this.activities.push(a);
+        });
       };
       fileReader.readAsArrayBuffer(file);
-      return activity;
+      return activities;
     },
   },
 });
