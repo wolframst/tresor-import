@@ -8,8 +8,13 @@ const getActivity = contents => {
   // identify broker from first page
   const broker = getBroker(contents[0]);
 
-  // get activities from all pages
-  return broker.parsePages(contents);
+  if (broker) {
+    // get activities from all pages
+    return broker.parsePages(contents);
+  } else {
+    // no supported broker found in PDF
+    return [];
+  }
 };
 
 export const getBroker = textArr => {
@@ -18,11 +23,13 @@ export const getBroker = textArr => {
   );
 
   if (supportedBrokers.length > 1) {
-    throw 'Multiple supported brokers found!';
+    console.error('Multiple supported brokers found!');
+    return false;
   }
 
   if (supportedBrokers.length === 0) {
-    throw 'No supported broker found!';
+    console.error('No supported broker found!')
+    return false;
   }
 
   return supportedBrokers[0];

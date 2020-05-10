@@ -56,7 +56,7 @@ new Vue({
       fileReader.onload = async e => {
         activities = await extractActivities(e);
 
-        activities.map(activity => {
+        const results = activities.map(activity => {
           const a = {
             ...activity,
             filename: file.name,
@@ -65,7 +65,10 @@ new Vue({
 
           console.log(a);
           this.activities.push(a);
+          return a;
         });
+
+        console.log(results)
       };
       fileReader.readAsArrayBuffer(file);
       return activities;
