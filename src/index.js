@@ -28,7 +28,7 @@ export const getBroker = textArr => {
   }
 
   if (supportedBrokers.length === 0) {
-    console.error('No supported broker found!')
+    console.error('No supported broker found!');
     return false;
   }
 

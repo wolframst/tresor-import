@@ -68,7 +68,7 @@ new Vue({
           return a;
         });
 
-        console.log(results)
+        console.log(results);
       };
       fileReader.readAsArrayBuffer(file);
       return activities;
