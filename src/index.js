@@ -65,7 +65,7 @@ export const extractActivities = async e => {
     contents.push(textArr);
   }
 
-  console.log(contents)
+  console.log(contents);
 
   // get activities out of entire PDF (all pages)
   let activities = [];
