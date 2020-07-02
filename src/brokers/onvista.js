@@ -4,9 +4,7 @@ import every from 'lodash/every';
 import values from 'lodash/values';
 import Big from 'big.js';
 
-const parseGermanNum = n => {
-  return parseFloat(n.replace(/\./g, '').replace(',', '.'));
-};
+import { parseGermanNum } from '@/helper';
 
 const findISIN = text => {
   const isin = text[text.findIndex(t => t.includes('ISIN')) + 1];
