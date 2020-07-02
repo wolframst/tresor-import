@@ -5,6 +5,12 @@ export const buySamples = [
   require('./buy-4.json'),
 ];
 
+export const sellSamples = [require('./sell-large.json')];
+
 export const multiPageSample = require('./multi-page.json');
 
-export const dividendsSamples = [require('./div-1.json')];
+export const dividendsSamples = [
+  require('./div-1.json'),
+  require('./div-2.json'),
+  require('./div-3.json'),
+];

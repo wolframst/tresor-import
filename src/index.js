@@ -11,6 +11,8 @@ const getActivity = contents => {
   // identify broker from first page
   const broker = getBroker(contents[0]);
 
+  console.log(JSON.stringify(contents, null, 2));
+
   if (broker) {
     // get activities from all pages
     return broker.parsePages(contents);
