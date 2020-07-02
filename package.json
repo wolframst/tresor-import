@@ -46,5 +46,17 @@
     "hooks": {
       "pre-commit": "npm run precommit"
     }
+  },
+  "jest": {
+    "modulePaths": [
+      "<rootDir>"
+    ],
+    "moduleDirectories": [
+      "node_modules",
+      "<rootDir>"
+    ],
+    "moduleNameMapper": {
+      "@/(.*)$": "<rootDir>/src/$1"
+    }
   }
 }

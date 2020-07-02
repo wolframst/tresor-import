@@ -4,8 +4,7 @@ import every from 'lodash/every';
 import values from 'lodash/values';
 import Big from 'big.js';
 
-const parseGermanNum = n =>
-  parseFloat(n.replace(/[-+]$/, '').replace(/\./g, '').replace(',', '.'));
+import { parseGermanNum } from '@/helper';
 
 const getValueByPreviousElement = (textArr, prev, range) =>
   textArr[textArr.findIndex(t => t.includes(prev)) + range];
