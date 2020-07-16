@@ -4,6 +4,7 @@ import {
   buySamples,
   sellSamples,
   dividendsSamples,
+  oldDividendsSamples,
 } from './__mocks__/consorsbank';
 
 console.error = jest.fn();
@@ -15,6 +16,10 @@ describe('Consorsbank broker', () => {
       .concat(sellSamples)) {
       expect(getBroker(sample[0])).toEqual(consorsbank);
     }
+  });
+
+  test('PDFs with the old Consorsbank format should not be accepted', () => {
+    expect(consorsbank.canParseData(oldDividendsSamples[0])).toEqual(false);
   });
 
   describe('Buy', () => {

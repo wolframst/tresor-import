@@ -125,9 +125,22 @@ const isDividend = textArr =>
     ['ertragsgutschrift', 'dividendengutschrift'].includes(t.toLowerCase())
   );
 
-export const canParseData = textArr =>
-  textArr.some(t => t.toLowerCase && t.toLowerCase().includes('consorsbank')) &&
-  (isBuy(textArr) || isSell(textArr) || isDividend(textArr));
+export const canParseData = textArr => {
+  const isConsors = textArr.some(
+    t => t.toLowerCase && t.toLowerCase().includes('consorsbank')
+  );
+
+  if (!isConsors) {
+    return false;
+  }
+
+  const isSupportedType =
+    isBuy(textArr) || isSell(textArr) || isDividend(textArr);
+
+  const isOldFormat = textArr.some(t => t.includes('IBAN') && t !== 'IBAN');
+
+  return isSupportedType && !isOldFormat;
+};
 
 export const parseData = textArr => {
   let type, date, isin, company, shares, price, amount, fee, tax;
