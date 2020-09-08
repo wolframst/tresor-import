@@ -147,14 +147,62 @@ const isSell = textArr => textArr.some(t => t.includes('Verkauf am'));
 
 const isDividend = textArr => textArr.some(t => t.includes('mit dem Ex-Tag'));
 
+const isOverviewStatement = content =>
+  content.some(
+    line =>
+      line.includes('DEPOTAUSZUG') || line.includes('JAHRESDEPOTABSTIMMUNG')
+  );
+
 export const canParseData = textArr =>
   textArr.some(t => t.includes('TRADE REPUBLIC BANK GMBH')) &&
   (isBuySingle(textArr) ||
     isBuySavingsPlan(textArr) ||
     isSell(textArr) ||
-    isDividend(textArr));
+    isDividend(textArr) ||
+    isOverviewStatement(textArr));
 
-export const parseData = textArr => {
+export const parsePositionAsActivity = (content, startLineNumber) => {
+  // Find the line with ISIN and the next line with the date
+  let lineNumberOfISIN;
+  let lineOfDate;
+  for (
+    let lineNumber = startLineNumber;
+    lineNumber < content.length;
+    lineNumber++
+  ) {
+    const line = content[lineNumber];
+    if (line.includes('ISIN:') && lineNumberOfISIN === undefined) {
+      lineNumberOfISIN = lineNumber;
+    }
+
+    if (lineNumberOfISIN !== undefined && /^\d{2}\.\d{2}\.\d{4}$/.test(line)) {
+      lineOfDate = lineNumber;
+      break;
+    }
+  }
+
+  const numberOfShares = parseGermanNum(content[startLineNumber].split(' ')[0]);
+  const toalAmount = parseGermanNum(content[lineOfDate + 1]);
+
+  return {
+    broker: 'traderepublic',
+    type: 'Buy',
+    date: format(
+      parse(content[lineOfDate], 'dd.MM.yyyy', new Date()),
+      'yyyy-MM-dd'
+    ),
+    isin: content[lineNumberOfISIN].split(' ')[1],
+    company: content[startLineNumber + 1],
+    shares: numberOfShares,
+    // We need to calculate the buy-price per share because in the overview is only the current price per share available.
+    price: +Big(toalAmount).div(Big(numberOfShares)),
+    amount: toalAmount,
+    fee: 0,
+    tax: 0,
+  };
+};
+
+export const parseOrderOrDividend = textArr => {
   let type, date, isin, company, shares, price, amount, fee, tax;
 
   if (isBuySingle(textArr) || isBuySavingsPlan(textArr)) {
@@ -191,7 +239,7 @@ export const parseData = textArr => {
     tax = findTax(textArr);
   }
 
-  return validateActivity({
+  return {
     broker: 'traderepublic',
     type,
     date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
@@ -202,11 +250,56 @@ export const parseData = textArr => {
     amount,
     fee,
     tax,
+  };
+};
+
+export const parsePage = content => {
+  let foundActivities = [];
+
+  if (
+    isBuySingle(content) ||
+    isBuySavingsPlan(content) ||
+    isSell(content) ||
+    isDividend(content)
+  ) {
+    foundActivities.push(parseOrderOrDividend(content));
+  } else if (isOverviewStatement(content)) {
+    for (let lineNumber = 0; lineNumber < content.length; lineNumber++) {
+      const line = content[lineNumber];
+      if (!line.includes(' Stk.')) {
+        continue;
+      }
+
+      foundActivities.push(parsePositionAsActivity(content, lineNumber));
+    }
+  }
+
+  let validatedActivities = [];
+  foundActivities.forEach(activity => {
+    if (validateActivity(activity)) {
+      validatedActivities.push(activity);
+    }
   });
+
+  return validatedActivities;
 };
 
 export const parsePages = contents => {
-  // trade republic only has one-page PDFs
-  const activity = parseData(contents[0]);
-  return [activity];
+  let activities = [];
+
+  for (let content of contents) {
+    try {
+      parsePage(content).forEach(activity => {
+        activities.push(activity);
+      });
+    } catch (exception) {
+      console.error(
+        'Error while parsing page (trade republic)',
+        exception,
+        content
+      );
+    }
+  }
+
+  return activities;
 };
