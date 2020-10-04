@@ -123,9 +123,13 @@ const isDividend = textArr =>
     ['ertragsgutschrift', 'dividendengutschrift'].includes(t.toLowerCase())
   );
 
-export const canParseData = textArr => {
-  const isConsors = textArr.some(
-    t => t.toLowerCase && t.toLowerCase().includes('consorsbank')
+export const canParsePage = (content, extension) => {
+  if (extension !== 'pdf') {
+    return false;
+  }
+
+  const isConsors = content.some(
+    line => line.toLowerCase && line.toLowerCase().includes('consorsbank')
   );
 
   if (!isConsors) {
@@ -133,14 +137,16 @@ export const canParseData = textArr => {
   }
 
   const isSupportedType =
-    isBuy(textArr) || isSell(textArr) || isDividend(textArr);
+    isBuy(content) || isSell(content) || isDividend(content);
 
-  const isOldFormat = textArr.some(t => t.includes('IBAN') && t !== 'IBAN');
+  const isOldFormat = content.some(
+    line => line.includes('IBAN') && line !== 'IBAN'
+  );
 
   return isSupportedType && !isOldFormat;
 };
 
-export const parseData = textArr => {
+const parseData = textArr => {
   let type, date, isin, company, shares, price, amount, fee, tax;
 
   if (isBuy(textArr)) {
@@ -190,7 +196,10 @@ export const parseData = textArr => {
 };
 
 export const parsePages = contents => {
-  // only first page has activity data
-  const activity = parseData(contents[0]);
-  return [activity];
+  const activities = [parseData(contents[0])];
+
+  return {
+    activities,
+    status: 0,
+  };
 };

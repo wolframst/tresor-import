@@ -1,7 +1,7 @@
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 
-import { parseGermanNum, validateActivity } from '@/helper';
+import { parseGermanNum } from '@/helper';
 
 const offsets = {
   shares: 0,
@@ -68,11 +68,12 @@ const isDividend = textArr =>
       t.includes('Ausschüttung Investmentfonds')
   );
 
-export const canParseData = textArr =>
-  textArr.some(t => t.includes('BIC PBNKDEFFXXX')) &&
-  (isBuy(textArr) || isSell(textArr) || isDividend(textArr));
+export const canParsePage = (content, extension) =>
+  extension === 'pdf' &&
+  content.some(line => line.includes('BIC PBNKDEFFXXX')) &&
+  (isBuy(content) || isSell(content) || isDividend(content));
 
-export const parseData = textArr => {
+const parseData = textArr => {
   let type, date, isin, company, shares, price, amount, fee;
 
   if (isBuy(textArr)) {
@@ -104,7 +105,7 @@ export const parseData = textArr => {
     fee = 0;
   }
 
-  return validateActivity({
+  return {
     broker: 'postbank',
     type,
     date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
@@ -114,11 +115,14 @@ export const parseData = textArr => {
     price,
     amount,
     fee,
-  });
+  };
 };
 
 export const parsePages = contents => {
-  // parse first page has activity data
-  const activity = parseData(contents[0]);
-  return [activity];
+  const activities = [parseData(contents[0])];
+
+  return {
+    activities,
+    status: 0,
+  };
 };

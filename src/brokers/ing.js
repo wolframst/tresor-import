@@ -2,7 +2,7 @@ import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 import Big from 'big.js';
 
-import { parseGermanNum, validateActivity } from '@/helper';
+import { parseGermanNum } from '@/helper';
 
 const getValueByPreviousElement = (textArr, prev, range) =>
   textArr[textArr.findIndex(t => t.includes(prev)) + range];
@@ -20,9 +20,10 @@ const isDividend = textArr =>
     t => t.includes('Dividendengutschrift') || t.includes('Ertragsgutschrift')
   );
 
-export const canParseData = textArr =>
-  textArr.some(t => t.includes('BIC: INGDDEFFXX')) &&
-  (isBuy(textArr) || isSell(textArr) || isDividend(textArr));
+export const canParsePage = (content, extension) =>
+  extension === 'pdf' &&
+  content.some(t => t.includes('BIC: INGDDEFFXX')) &&
+  (isBuy(content) || isSell(content) || isDividend(content));
 
 const findShares = textArr =>
   isBuy(textArr) || isSell(textArr)
@@ -95,7 +96,7 @@ const findPayout = textArr =>
     getValueByPreviousElement(textArr, 'Gesamtbetrag zu Ihren Gunsten', 2)
   );
 
-export const parseData = textArr => {
+const parseData = textArr => {
   let type, date, isin, company, shares, price, amount, fee, tax;
 
   if (isBuy(textArr)) {
@@ -130,7 +131,7 @@ export const parseData = textArr => {
     tax = findTaxes(textArr);
   }
 
-  return validateActivity({
+  return {
     broker: 'ing',
     type,
     date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
@@ -141,11 +142,14 @@ export const parseData = textArr => {
     amount,
     fee,
     tax,
-  });
+  };
 };
 
 export const parsePages = contents => {
-  // parse first page has activity data
-  const activity = parseData(contents[0]);
-  return [activity];
+  const activities = [parseData(contents[0])];
+
+  return {
+    activities,
+    status: 0,
+  };
 };
