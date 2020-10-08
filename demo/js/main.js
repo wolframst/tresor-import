@@ -1,7 +1,10 @@
 import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import parse from 'date-fns/parse';
 import { de } from 'date-fns/locale';
-import getActivities from '../../src';
+// import getActivities from '../../src'
+import getActivities from '../../dist/tresor-import';
+
+console.log(getActivities);
 
 new Vue({
   el: '#app',
