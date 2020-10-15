@@ -1,5 +1,5 @@
 {
-  "name": "tresor-import",
+  "name": "@tresor.one/import",
   "version": "2.0.0",
   "description": "Creates Tresor One activities from PDF statements of brokers",
   "files": [
