@@ -111,7 +111,7 @@ export const canParsePage = (content, extension) => {
   //The first PDF Page does not always contain "Commerzbank", thus this ugly
   //workaround. e. G. dividend_IE00B3RBWM25_1.json
   if (!Array.isArray(content)) {
-    return undefined
+    return undefined;
   }
   const joinedContent = content.join('');
   return (
