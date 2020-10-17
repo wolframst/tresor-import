@@ -1,0 +1,201 @@
+import { findImplementation } from '@/index';
+import * as commerzbank from '../../src/brokers/commerzbank';
+import {
+  allSamples,
+  buySamples,
+  dividendSamples,
+} from './__mocks__/commerzbank';
+
+describe('Broker: commerzbank', () => {
+  let consoleErrorSpy;
+
+  describe('Check all documents', () => {
+    test('Can pdf file be parsed with commerzbank', () => {
+      allSamples.forEach(sample => {
+        expect(
+          sample.some(item => commerzbank.canParsePage(item, 'pdf'))
+        ).toEqual(true);
+      });
+    });
+
+    test('Can identify a broker from a single page as commerzbank', () => {
+      allSamples.forEach(sample => {
+        const implementations = findImplementation(sample, 'pdf');
+        expect(implementations.length).toEqual(1);
+        expect(implementations[0]).toEqual(commerzbank);
+      });
+    });
+  });
+
+  describe('Validate buys', () => {
+    test('Can a buy order be parsed from the document', () => {
+      const result = commerzbank.parsePages(buySamples[0]);
+
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'commerzbank',
+        type: 'Buy',
+        date: '2020-01-06',
+        wkn: 'A1T8FV',
+        company: 'Vang.FTSE A.-Wo.Hi.Di.Yi.U.ETF',
+        shares: 4.76,
+        price: 52.61974789915966,
+        amount: 250.47,
+        fee: 0,
+        tax: 0,
+      });
+    });
+
+    test('Can split buy A1JX51 order 1 be parsed from the document', () => {
+      const result = commerzbank.parsePages(buySamples[1]);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'commerzbank',
+        type: 'Buy',
+        date: '2020-01-06',
+        wkn: 'A1JX51',
+        company: 'Vanguard FTSE Em.Markets U.ETF',
+        shares: 0.906,
+        price: 55.68432671081678,
+        amount: 50.45,
+        fee: 0,
+        tax: 0,
+      });
+    });
+
+    test('Can split buy A1JX51 order 2 be parsed from the document', () => {
+      const result = commerzbank.parsePages(buySamples[2]);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'commerzbank',
+        type: 'Buy',
+        date: '2020-01-17',
+        wkn: 'A1JX51',
+        company: 'Vanguard FTSE Em.Markets U.ETF',
+        shares: 0.899,
+        price: 56.15127919911012,
+        amount: 50.48,
+        fee: 0,
+        tax: 0,
+      });
+    });
+
+    test('Can split buy A1JX52 order 1 be parsed from the document', () => {
+      const result = commerzbank.parsePages(buySamples[3]);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'commerzbank',
+        type: 'Buy',
+        date: '2020-01-06',
+        wkn: 'A1JX52',
+        company: 'Vanguard FTSE All-World U.ETF',
+        shares: 2.975,
+        price: 84.17815126050421,
+        amount: 250.43,
+        fee: 0,
+        tax: 0,
+      });
+    });
+
+    test('Can split buy A1JX52 order 2 be parsed from the document', () => {
+      const result = commerzbank.parsePages(buySamples[4]);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'commerzbank',
+        type: 'Buy',
+        date: '2020-01-17',
+        wkn: 'A1JX52',
+        company: 'Vanguard FTSE All-World U.ETF',
+        shares: 2.949,
+        price: 84.9440488301119,
+        amount: 250.5,
+        fee: 0,
+        tax: 0,
+      });
+    });
+
+    test('Can split buy A1T8FV order 1 be parsed from the document', () => {
+      const result = commerzbank.parsePages(buySamples[5]);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'commerzbank',
+        type: 'Buy',
+        date: '2020-01-17',
+        wkn: 'A1T8FV',
+        company: 'Vang.FTSE A.-Wo.Hi.Di.Yi.U.ETF',
+        shares: 4.776,
+        price: 52.44137353433836,
+        amount: 250.46,
+        fee: 0,
+        tax: 0,
+      });
+    });
+  });
+
+  describe('Validate dividends', () => {
+    test('Can the dividend for  be parsed correctly', () => {
+      const result = commerzbank.parsePages(dividendSamples[0]);
+
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'commerzbank',
+        type: 'Dividend',
+        date: '2020-04-14',
+        isin: 'IE00B3RBWM25',
+        wkn: 'A1JX52',
+        company: 'VANG.FTSE A.-WO.U.ETF',
+        shares: 57.247,
+        price: 0.3745174419620242,
+        amount: 21.44,
+        fee: 0,
+        tax: 3.95,
+      });
+    });
+
+    test('Can the dividend for  be parsed correctly', () => {
+      const result = commerzbank.parsePages(dividendSamples[5]);
+
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'commerzbank',
+        type: 'Dividend',
+        date: '2020-06-26',
+        isin: 'IE00B8GKDB10',
+        wkn: 'A1T8FV',
+        company: 'VA.FTSE A.W.H.D.Y.UETFDLD',
+        shares: 91.984,
+        price: 0.35614889546008,
+        amount: 32.76,
+        fee: 0,
+        tax: 6.04,
+      });
+    });
+
+    test('Can the dividend of another currency be parsed correctly', () => {
+      const result = commerzbank.parsePages(dividendSamples[6]);
+
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'commerzbank',
+        type: 'Dividend',
+        date: '2020-06-26',
+        isin: 'IE00B3RBWM25',
+        wkn: 'A1JX52',
+        company: 'Vanguard FTSE All-World U.ETF',
+        shares: 74.93,
+        price: 0.33618043507273454,
+        amount: 25.19,
+        fee: 0,
+        tax: 0,
+      });
+    });
+  });
+
+  beforeEach(() => {
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+});
