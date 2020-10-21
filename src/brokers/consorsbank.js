@@ -48,19 +48,21 @@ const findDividendShares = textArr => {
   return parseGermanNum(shares);
 };
 
-const findAmount = textArr => {
-  const idx = textArr.findIndex(t => t.toLowerCase() === 'kurswert');
-  const amount = textArr[idx + 2];
+const findAmount = (textArr, type) => {
+  let amount, idx;
 
-  return parseGermanNum(amount);
-};
-
-const findPayout = textArr => {
-  const idx = textArr.findIndex(t =>
-    ['brutto in eur', 'brutto'].includes(t.toLowerCase())
-  );
-  const amount = textArr[idx + 1].split(' ')[0];
-
+  if (type === 'Buy' || type === 'Sell') {
+    idx = textArr.indexOf("Kurswert");
+    amount = textArr[idx + 2];
+  }
+  else if (type === 'Dividend') {
+    // "Brutto in EUR" is only present if the dividend is paid in a foreign currency, otherwise its just "Brutto"
+    idx = textArr.indexOf('Brutto in EUR');
+    if (idx < 0) {
+      idx = textArr.indexOf('Brutto');
+    }
+    amount = textArr[idx + 1].split(' ')[0];
+  }
   return parseGermanNum(amount);
 };
 
@@ -165,7 +167,7 @@ const parseData = textArr => {
     company = findCompany(textArr);
     date = findDateBuySell(textArr);
     shares = findShares(textArr);
-    amount = findAmount(textArr);
+    amount = findAmount(textArr, 'Buy');
     price = +Big(amount).div(Big(shares));
     fee = findFee(textArr);
     tax = 0;
@@ -175,7 +177,7 @@ const parseData = textArr => {
     company = findCompany(textArr);
     date = findDateBuySell(textArr);
     shares = findShares(textArr);
-    amount = findAmount(textArr);
+    amount = findAmount(textArr, 'Sell');
     price = +Big(amount).div(Big(shares));
     fee = findFee(textArr);
     tax = findTax(textArr);
@@ -185,7 +187,7 @@ const parseData = textArr => {
     company = findCompany(textArr);
     date = findDateDividend(textArr);
     shares = findDividendShares(textArr);
-    amount = findPayout(textArr);
+    amount = findAmount(textArr, 'Dividend');
     price = +Big(amount).div(Big(shares));
     fee = 0;
     tax = findDividendTax(textArr);
