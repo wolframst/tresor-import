@@ -1,8 +1,10 @@
 {
   "name": "@tresor.one/import",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Creates Tresor One activities from PDF statements of brokers",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "main": "dist/tresor-import.js",
   "scripts": {
     "build": "./node_modules/.bin/webpack --config=webpack.build.js",
@@ -15,7 +17,12 @@
     "lint": "eslint .",
     "precommit": "pretty-quick --staged --no-restage && npm run lint && npm t"
   },
-  "keywords": ["tresor", "one", "pdf", "import"],
+  "keywords": [
+    "tresor",
+    "one",
+    "pdf",
+    "import"
+  ],
   "author": "Sumit Kumar",
   "license": "MIT",
   "dependencies": {
@@ -52,8 +59,13 @@
     }
   },
   "jest": {
-    "modulePaths": ["<rootDir>"],
-    "moduleDirectories": ["node_modules", "<rootDir>"],
+    "modulePaths": [
+      "<rootDir>"
+    ],
+    "moduleDirectories": [
+      "node_modules",
+      "<rootDir>"
+    ],
     "moduleNameMapper": {
       "@/(.*)$": "<rootDir>/src/$1"
     }
