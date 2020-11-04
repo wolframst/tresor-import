@@ -4,9 +4,12 @@ import Big from 'big.js';
 
 import { parseGermanNum, validateActivity } from '@/helper';
 
-const findISIN = (text, span) => {
-  const isinLine = text[text.findIndex(t => t.includes('/ISIN')) + span];
-  return isinLine.substr(isinLine.length - 12);
+const findISINAndWKN = (text, spanISIN) => {
+  // The line contains either WPKNR/ISIN or WKN/ISIN, depending on the document
+  const isinIndex = text.findIndex(t => t.includes('/ISIN'));
+  const isinLine = text[isinIndex + spanISIN].split(/\s+/);
+  const wknLine = text[isinIndex + 1].split(/\s+/);
+  return [isinLine[isinLine.length - 1], wknLine[wknLine.length - 1]];
 };
 
 const findCompany = (text, span) => {
@@ -18,17 +21,19 @@ const findCompany = (text, span) => {
 };
 
 const findDateBuySell = textArr => {
-  const dateLine = textArr[textArr.findIndex(t => t.includes('Valuta')) + 1];
-  const date = dateLine.split(/\s+/);
+  const dateLine = textArr[textArr.findIndex(t => t.includes('Geschäftstag'))];
+  const date = dateLine.split(/\s+/)[2];
   return format(
-    parse(date[date.length - 3], 'dd.MM.yyyy', new Date()),
+    parse(date, 'dd.MM.yyyy', new Date()),
     'yyyy-MM-dd'
   );
 };
 
 const findDateDividend = textArr => {
-  const dateLine = textArr[textArr.findIndex(t => t.includes('zahlbar ab'))];
-  const date = dateLine.split('zahlbar ab')[1].trim().substr(0, 10);
+  const dateLine = textArr[
+    textArr.findIndex(t => t.includes('Valuta')) + 1
+  ].split(/\s+/);
+  const date = dateLine[dateLine.length - 3];
   return format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd');
 };
 
@@ -64,32 +69,40 @@ const findDividendShares = textArr => {
   return parseGermanNum(shares);
 };
 
-const findAmount = textArr => {
-  const priceArea = textArr.slice(
-    textArr.findIndex(t => t.includes('Kurswert'))
-  );
-  const priceLine = priceArea[priceArea.findIndex(t => t.includes('EUR'))];
-  const amount = Big(parseGermanNum(priceLine.split('EUR')[1].trim()));
+const findAmount = (textArr, fxRate, foreignCurrency) => {
+  const amountArea = textArr.findIndex(t => t.includes('Kurswert'));
+  const amountLine = textArr[amountArea].split(/\s+/);
+  let amount = Big(parseGermanNum(amountLine[amountLine.length - 1]));
+
+  if (amountLine[amountLine.length - 2] === foreignCurrency) {
+    amount = amount.div(fxRate);
+  }
   // If there is a currency-rate within the price line a foreign reduction
   // has not yet been factored in
-  if (priceLine.includes('Devisenkurs')) {
-    return amount.plus(findPurchaseReduction(textArr));
+  if (amountLine.includes('Devisenkurs')) {
+    return amount.plus(findPurchaseReduction(textArr, fxRate, foreignCurrency));
   }
   return amount;
 };
 
-const findPayout = textArr => {
-  const amountLine = textArr[textArr.findIndex(t => t.includes('Gunsten')) + 1];
-  const amountPart = amountLine.split('EUR');
-  const amount = amountPart[amountPart.length - 1].trim();
-  return parseGermanNum(amount);
+const findPayout = (textArr, fxRate) => {
+  const amountLine =
+    textArr[textArr.findIndex(t => t.includes('Bruttobetrag'))];
+  const amountPart = amountLine.split(/\s+/);
+  const amount = parseGermanNum(amountPart[2]);
+  if (fxRate !== undefined) {
+    return +Big(amount).div(fxRate);
+  }
+  return amount;
 };
 
 const findFee = (textArr, amount) => {
-  const totalCostLine =
-    textArr[textArr.findIndex(t => t.includes('Zu Ihren')) + 1];
-  const totalCost = totalCostLine.split('EUR').pop().trim();
-  return Big(parseGermanNum(totalCost)).minus(Big(amount));
+  const totalCostLine = textArr[
+    textArr.findIndex(t => t.includes('Zu Ihren')) + 1
+  ].split(/\s+/);
+  return Big(parseGermanNum(totalCostLine[totalCostLine.length - 1])).minus(
+    Big(amount)
+  );
 };
 
 const findPayoutTax = (textArr, fxRate) => {
@@ -110,25 +123,25 @@ const findPayoutTax = (textArr, fxRate) => {
   return payoutTax;
 };
 
-const findPurchaseReduction = textArr => {
+const findPurchaseReduction = (textArr, fxRate, foreignCurrency) => {
   const reduction = Big(0);
-  const lineWithReduction = textArr.findIndex(t =>
+  const reductionIndex = textArr.findIndex(t =>
     t.includes('Reduktion Kaufaufschlag')
   );
-  if (lineWithReduction < 0) {
+  if (reductionIndex < 0) {
     return +reduction;
   }
   let rate = 1;
-  // Sometimes the reduction is in euro. If not the rate will be determined to adjust to the right currency.
-  if (!textArr[lineWithReduction].includes('EUR')) {
-    rate = parseGermanNum(textArr[lineWithReduction - 1].split(' ')[3]);
-  }
-  const reductionValueSplit = textArr[lineWithReduction].split(' ');
-  let reductionValue = reductionValueSplit[reductionValueSplit.length - 1];
+  const reductionLine = textArr[reductionIndex].split(/\s+/);
+  let reductionValue = reductionLine[reductionLine.length - 1];
   if (reductionValue.endsWith('-')) {
     reductionValue = Big(parseGermanNum(reductionValue.slice(0, -1))).abs();
   }
-  return Big(reductionValue).div(rate);
+  // Sometimes the reduction is in euro. If not the fxRate will be applied
+  if (reductionLine.includes(foreignCurrency)) {
+    return Big(reductionValue).div(rate);
+  }
+  return Big(reductionValue);
 };
 
 const findPayoutFxrateForeignCurrency = textArr => {
@@ -145,18 +158,26 @@ const findPayoutFxrateForeignCurrency = textArr => {
 };
 
 const findBuyFxRateForeignCurrency = textArr => {
-  const foreignIndex = textArr.findIndex(line =>
+  const foreignIndexV1 = textArr.findIndex(line =>
     line.includes('Umrechnung zum Devisenkurs ')
   );
-  if (foreignIndex > 0) {
-    const fxRateLine = textArr[foreignIndex].split(/\s+/);
-    const foreignCurrency = textArr[foreignIndex - 3].split(/\s+/);
-    return [parseGermanNum(fxRateLine[3]), foreignCurrency[2]];
+  const foreignIndexV2 = textArr.findIndex(line =>
+    line.includes('Umrechn. zum Dev. kurs ')
+  );
+  let fxRate = undefined;
+  let foreignCurrency = undefined;
+  if (foreignIndexV1 > 0) {
+    fxRate = parseGermanNum(textArr[foreignIndexV1].split(/\s+/)[3]);
+    foreignCurrency = textArr[foreignIndexV1 - 3].split(/\s+/)[2];
+  } else if (foreignIndexV2 > 0) {
+    fxRate = parseGermanNum(textArr[foreignIndexV2].split(/\s+/)[4]);
+    foreignCurrency = textArr[foreignIndexV2 - 3].split(/\s+/)[2];
   }
-  return [undefined, undefined];
+  return [fxRate, foreignCurrency];
 };
 
 const isBuy = textArr => textArr.some(t => t.includes('Wertpapierkauf'));
+
 const isSell = textArr => textArr.some(t => t.includes('Wertpapierverkauf'));
 
 const isDividend = textArr =>
@@ -164,14 +185,17 @@ const isDividend = textArr =>
   textArr.some(t => t.includes('Dividendengutschrift'));
 
 export const canParsePage = (content, extension) =>
+  // The defining string used to be 'comdirect bank'. However, this string is
+  // not present in every document; 'comdirect' is.
   extension === 'pdf' &&
-  content.some(line => line.includes('comdirect bank')) &&
+  content.some(line => line.includes('comdirect')) &&
   (isBuy(content) || isSell(content) || isDividend(content));
 
 const parseData = textArr => {
   let type,
     date,
     isin,
+    wkn,
     company,
     shares,
     price,
@@ -184,17 +208,17 @@ const parseData = textArr => {
   if (isBuy(textArr)) {
     type = 'Buy';
     date = findDateBuySell(textArr);
-    isin = findISIN(textArr, 2);
+    [fxRate, foreignCurrency] = findBuyFxRateForeignCurrency(textArr);
+    [isin, wkn] = findISINAndWKN(textArr, 2);
     company = findCompany(textArr, 1);
-    amount = +findAmount(textArr);
+    amount = +findAmount(textArr, fxRate, foreignCurrency);
     shares = findShares(textArr);
     price = +Big(amount).div(shares);
     fee = +findFee(textArr, amount);
     tax = 0;
-    [fxRate, foreignCurrency] = findBuyFxRateForeignCurrency(textArr);
   } else if (isSell(textArr)) {
     type = 'Sell';
-    isin = findISIN(textArr, 2);
+    [isin, wkn] = findISINAndWKN(textArr, 2);
     company = findCompany(textArr, 1);
     date = findDateBuySell(textArr);
     shares = findShares(textArr);
@@ -203,14 +227,14 @@ const parseData = textArr => {
     fee = +findFee(textArr, amount);
     tax = 0;
   } else if (isDividend(textArr)) {
+    [fxRate, foreignCurrency] = findPayoutFxrateForeignCurrency(textArr);
     type = 'Dividend';
-    isin = findISIN(textArr, 3);
+    [isin, wkn] = findISINAndWKN(textArr, 3);
     company = findCompany(textArr, 2);
     date = findDateDividend(textArr);
     shares = findDividendShares(textArr);
-    amount = findPayout(textArr);
+    amount = findPayout(textArr, fxRate);
     price = +Big(amount).div(Big(shares));
-    [fxRate, foreignCurrency] = findPayoutFxrateForeignCurrency(textArr);
     fee = 0;
     tax = +findPayoutTax(textArr, fxRate);
   }
@@ -219,6 +243,7 @@ const parseData = textArr => {
     type,
     date,
     isin,
+    wkn,
     company,
     shares,
     price,
