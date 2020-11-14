@@ -112,6 +112,25 @@ describe('Broker: Consorsbank', () => {
         },
       ]);
     });
+
+    test('should map pdf data of old buy sample correctly', () => {
+      const activity = consorsbank.parsePages(buySamples[4]).activities;
+
+      expect(activity).toEqual([
+        {
+          broker: 'consorsbank',
+          type: 'Buy',
+          company: 'PAYPAL HDGS INC.DL-,0001',
+          date: '2015-08-06',
+          fee: 13.9,
+          isin: 'US70450Y1038',
+          price: 35.784000,
+          shares: 100,
+          amount: 3578.40,
+          tax: 0,
+        },
+      ]);
+    });
   });
 
   describe('Sell', () => {
@@ -290,6 +309,57 @@ describe('Broker: Consorsbank', () => {
           price: 0.8723949318008724,
           shares: 1.4443,
           tax: 0.19,
+          type: 'Dividend',
+        },
+      ]);
+    });
+
+    test('should map pdf data of illinois tool works', () => {
+      expect(consorsbank.parsePages(dividendsSamples[8]).activities).toEqual([
+        {
+          amount: 23.29,
+          broker: 'consorsbank',
+          company: 'ILLINOIS TOOL WORKS INC. Registered Shares o.N.',
+          date: '2020-10-14',
+          fee: 0,
+          isin: 'US4523081093',
+          price: 0.9704166666666667,
+          shares: 24,
+          tax: 5.95,
+          type: 'Dividend',
+        },
+      ]);
+    });
+
+    test('should map pdf data of realty income', () => {
+      expect(consorsbank.parsePages(dividendsSamples[9]).activities).toEqual([
+        {
+          broker: 'consorsbank',
+          company: 'REALTY INCOME CORP. Registered Shares DL 1',
+          date: '2020-02-19',
+          isin: 'US7561091049',
+          amount: 0.13,
+          fee: 0,
+          price: 0.1908256880733945,
+          shares: 0.68125,
+          tax: 0.02,
+          type: 'Dividend',
+        },
+      ]);
+    });
+
+    test('should map pdf data of agnc investment corp', () => {
+      expect(consorsbank.parsePages(dividendsSamples[10]).activities).toEqual([
+        {
+          broker: 'consorsbank',
+          company: 'AGNC Investment Corp. Registered Shares DL -,001',
+          date: '2020-06-29',
+          isin: 'US00123Q1040',
+          amount: 5.87,
+          fee: 0,
+          price: 0.09171875,
+          shares: 64,
+          tax: 0.88,
           type: 'Dividend',
         },
       ]);
