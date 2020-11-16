@@ -60,19 +60,66 @@ export function validateActivity(activity, findSecurityAlsoByCompany = false) {
     return undefined;
   }
 
-  // The date must be in the past.
-  if (activity.date > new Date()) {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setUTCHours(0, 0, 0, 0);
+
+  const oldestDate = new Date(1990, 1, 1);
+  oldestDate.setUTCHours(0, 0, 0, 0);
+
+  // The date property must be present.
+  if (activity.date === undefined) {
     console.error(
-      'The activity for ' + activity.broker + ' has to be in the past.',
+      'The activity date for ' + activity.broker + ' must be present.',
+      activity
+    );
+    return undefined;
+  }
+
+  // The datetime property must be present.
+  if (activity.datetime === undefined) {
+    console.error(
+      'The activity datetime for ' + activity.broker + ' must be present.',
+      activity
+    );
+    return undefined;
+  }
+
+  // The date must be in the past.
+  if (activity.date > tomorrow) {
+    console.error(
+      'The activity date for ' + activity.broker + ' has to be in the past.',
       activity
     );
     return undefined;
   }
 
   // The date must be not older than 1990-01-01
-  if (activity.date < new Date(1990, 1, 1)) {
+  if (activity.date < oldestDate) {
     console.error(
-      'The activity for ' + activity.broker + ' is older than 1990-01-01.',
+      'The activity date for ' + activity.broker + ' is older than 1990-01-01.',
+      activity
+    );
+    return undefined;
+  }
+
+  // The datetime must be in the past.
+  if (activity.datetime > tomorrow) {
+    console.error(
+      'The activity datetime for ' +
+        activity.broker +
+        ' has to be in the past.',
+      activity
+    );
+    return undefined;
+  }
+
+  // The datetime must be not older than 1990-01-01
+  if (activity.datetime < oldestDate) {
+    console.error(
+      'The activity datetime for ' +
+        activity.broker +
+        ' is older than 1990-01-01.',
       activity
     );
     return undefined;
