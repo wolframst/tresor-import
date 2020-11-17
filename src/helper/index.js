@@ -246,6 +246,10 @@ export function createActivityDateTime(date, time) {
 
     dateTime.setHours(timeElements[0]);
     dateTime.setMinutes(timeElements[1]);
+
+    if (timeElements.length === 3) {
+      dateTime.setSeconds(timeElements[2]);
+    }
   }
 
   return [format(dateTime, 'yyyy-MM-dd'), dateTime.toISOString()];
