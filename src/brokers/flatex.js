@@ -1,8 +1,9 @@
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
 import Big from 'big.js';
-
-import { parseGermanNum } from '@/helper';
+import {
+  parseGermanNum,
+  validateActivity,
+  createActivityDateTime,
+} from '@/helper';
 
 const getTableValueByKey = (textArr, startLineNumer, key) => {
   const finding = textArr.find(
@@ -54,6 +55,29 @@ const findDateBuySell = (textArr, startLineNumer) =>
   getTableValueByKey(textArr, startLineNumer, 'Schlusstag')
     ? getTableValueByKey(textArr, startLineNumer, 'Schlusstag').split(', ')[0] // standard stock
     : getHeaderValueByKey(textArr, 0, 'Handelstag'); // etf
+
+const findOrderTime = (textArr, startLineNumer) => {
+  const lineWithOrderTime = getTableValueByKey(
+    textArr,
+    startLineNumer,
+    'Schlusstag'
+  );
+  if (lineWithOrderTime !== null && lineWithOrderTime.includes(':')) {
+    return lineWithOrderTime.split(' ')[1].trim();
+  }
+
+  const lineWithExecutionTime = getHeaderValueByKey(
+    textArr,
+    0,
+    'Ausführungszeit'
+  );
+  // console.warn(lineWithExecutionTime, lineWithExecutionTime.split(' '), lineWithExecutionTime.split(' ')[0])
+  if (lineWithExecutionTime === null || !lineWithExecutionTime.includes(':')) {
+    return undefined;
+  }
+
+  return lineWithExecutionTime.split(' ')[0];
+};
 
 const findShares = (textArr, startLineNumer) =>
   parseGermanNum(
@@ -159,9 +183,19 @@ const findPayout = (textArr, startLineNumer) => {
     : 0; // Bemessungsgrundlage
 
   if (assessmentBasis <= 0) {
-    const payoutForeign = getTableValueByKey(textArr, startLineNumer, 'Bruttodividende').split(' ')[0];
-    const conversionRate = getTableValueByKey(textArr, startLineNumer, 'Devisenkurs').split(' ')[0];
-    return +(Big(parseGermanNum(payoutForeign)).div(parseGermanNum(conversionRate)));
+    const payoutForeign = getTableValueByKey(
+      textArr,
+      startLineNumer,
+      'Bruttodividende'
+    ).split(' ')[0];
+    const conversionRate = getTableValueByKey(
+      textArr,
+      startLineNumer,
+      'Devisenkurs'
+    ).split(' ')[0];
+    return +Big(parseGermanNum(payoutForeign)).div(
+      parseGermanNum(conversionRate)
+    );
   }
   return assessmentBasis;
 };
@@ -185,13 +219,14 @@ export const parseSinglePage = textArr => {
 };
 
 export const parsePage = (textArr, startLineNumer) => {
-  let type, date, isin, company, shares, price, amount, fee, tax;
+  let type, date, time, isin, company, shares, price, amount, fee, tax;
 
   if (lineContains(textArr, startLineNumer, 'Kauf')) {
     type = 'Buy';
     isin = findISIN(textArr, startLineNumer);
     company = findCompany(textArr, startLineNumer);
     date = findDateBuySell(textArr, startLineNumer);
+    time = findOrderTime(textArr, startLineNumer);
     shares = findShares(textArr, startLineNumer);
     amount = findAmount(textArr, startLineNumer);
     price = findPrice(textArr, startLineNumer);
@@ -202,6 +237,7 @@ export const parsePage = (textArr, startLineNumer) => {
     isin = findISIN(textArr, startLineNumer);
     company = findCompany(textArr, startLineNumer);
     date = findDateBuySell(textArr, startLineNumer);
+    time = findOrderTime(textArr, startLineNumer);
     shares = findShares(textArr, startLineNumer);
     amount = findAmount(textArr, startLineNumer);
     price = findPrice(textArr, startLineNumer);
@@ -222,10 +258,13 @@ export const parsePage = (textArr, startLineNumer) => {
     tax = findDividendTax(textArr, startLineNumer);
   }
 
-  return {
+  const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
+
+  return validateActivity({
     broker: 'flatex',
     type,
-    date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
+    date: parsedDate,
+    datetime: parsedDateTime,
     isin,
     company,
     shares,
@@ -233,7 +272,7 @@ export const parsePage = (textArr, startLineNumer) => {
     amount,
     fee,
     tax,
-  };
+  });
 };
 
 export const parsePages = contents => {
