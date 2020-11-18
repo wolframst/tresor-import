@@ -1,10 +1,8 @@
 import { findImplementation } from '@/index';
 import * as degiro from '../../src/brokers/degiro';
-import {
-  transactionLog
-} from './__mocks__/degiro';
+import { transactionLog } from './__mocks__/degiro';
 
-const allSamples = transactionLog//.concat(futureSamples);
+const allSamples = transactionLog; //.concat(futureSamples);
 
 describe('Broker: DEGIRO', () => {
   let consoleErrorSpy;
@@ -12,9 +10,9 @@ describe('Broker: DEGIRO', () => {
   describe('Check all documents', () => {
     test('Can the document parsed with DEGIRO', () => {
       allSamples.forEach(samples => {
-        expect(
-          samples.some(item => degiro.canParsePage(item, 'pdf'))
-        ).toEqual(true);
+        expect(samples.some(item => degiro.canParsePage(item, 'pdf'))).toEqual(
+          true
+        );
       });
     });
 
@@ -36,6 +34,7 @@ describe('Broker: DEGIRO', () => {
         broker: 'degiro',
         type: 'Buy',
         date: '2020-03-30',
+        datetime: '2020-03-30T14:09:00.000Z',
         isin: 'US64110L1061',
         company: 'NETFLIX INC. - COMMON',
         shares: 12,
@@ -48,6 +47,7 @@ describe('Broker: DEGIRO', () => {
         broker: 'degiro',
         type: 'Buy',
         date: '2020-02-21',
+        datetime: '2020-02-21T12:03:00.000Z',
         isin: 'KYG875721634',
         company: 'TENCENT HLDGS HD-,00002',
         shares: 416,

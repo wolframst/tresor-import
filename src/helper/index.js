@@ -232,8 +232,8 @@ export function findFirstIsinIndexInArray(array) {
   return isinIndex === -1 ? undefined : isinIndex;
 }
 
-export function createActivityDateTime(date, time) {
-  const dateTime = parse(date, 'dd.MM.yyyy', new Date());
+export function createActivityDateTime(date, time, dateFormat = 'dd.MM.yyyy') {
+  const dateTime = parse(date, dateFormat, new Date());
 
   if (time === undefined || !time.includes(':')) {
     // When no time is present, use the current time to ensure the right order by time of the current activity.
