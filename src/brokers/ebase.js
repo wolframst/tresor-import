@@ -1,7 +1,9 @@
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
 import Big from 'big.js';
-import { parseGermanNum, validateActivity } from '@/helper';
+import {
+  parseGermanNum,
+  validateActivity,
+  createActivityDateTime,
+} from '@/helper';
 
 const parseShare = shareString => {
   try {
@@ -31,13 +33,16 @@ const parseNumberBeforeSpace = input => {
 };
 
 function parseBaseAction(pdfArray, pdfOffset, actionType) {
-  const activity = {
+  const [parsedDate, parsedDateTime] = createActivityDateTime(
+    pdfArray[pdfOffset + 6],
+    undefined
+  );
+
+  return validateActivity({
     broker: 'ebase',
     type: actionType,
-    date: format(
-      parse(pdfArray[pdfOffset + 6], 'dd.MM.yyyy', new Date()),
-      'yyyy-MM-dd'
-    ),
+    date: parsedDate,
+    datetime: parsedDateTime,
     isin: pdfArray[pdfOffset + 2],
     company: pdfArray[pdfOffset + 1],
     shares: parseShare(pdfArray[pdfOffset + 4]),
@@ -45,8 +50,7 @@ function parseBaseAction(pdfArray, pdfOffset, actionType) {
     amount: parseNumberBeforeSpace(pdfArray[pdfOffset + 7]),
     tax: 0,
     fee: 0,
-  };
-  return validateActivity(activity);
+  });
 }
 
 export const parseData = pdfPages => {

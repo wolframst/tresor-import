@@ -29,24 +29,7 @@ describe('Broker: ebase', () => {
   });
 
   test('should validate the result', () => {
-    const activity = parseData(invalidSamples[0]);
-
-    expect(activity).toEqual(undefined);
-    expect(console.error).toHaveBeenLastCalledWith(
-      'The activity for ebase has empty fields.',
-      {
-        type: 'Sell',
-        amount: 45,
-        broker: 'ebase',
-        company: 'DWS Top Dividende LD',
-        date: '2019-12-19',
-        isin: 'DE0009848119',
-        price: 130.93,
-        shares: undefined,
-        tax: 0.0,
-        fee: 0,
-      }
-    );
+    expect(parseData(invalidSamples[0])).toEqual(undefined);
   });
 
   describe('Check all documents', () => {
@@ -70,12 +53,13 @@ describe('Broker: ebase', () => {
 
   describe('Validate buys', () => {
     test('Can parse multiple planned buy orders from a document', () => {
-      const activities = ebase.parsePages(buySamples[0]);
-      expect(activities.activities.length).toEqual(11);
-      expect(activities.activities[0]).toEqual({
+      const activities = ebase.parsePages(buySamples[0]).activities;
+      expect(activities.length).toEqual(11);
+      expect(activities[0]).toEqual({
         broker: 'ebase',
         type: 'Buy',
         date: '2020-07-01',
+        datetime: '2020-07-01T' + activities[0].datetime.substring(11),
         isin: 'DE000A0X7541',
         company: 'ACATIS GANÉ VALUE EVENT FONDS A',
         shares: 0.054571,
@@ -84,10 +68,11 @@ describe('Broker: ebase', () => {
         tax: 0.0,
         fee: 0.0,
       });
-      expect(activities.activities[10]).toEqual({
+      expect(activities[10]).toEqual({
         broker: 'ebase',
         type: 'Buy',
         date: '2020-07-01',
+        datetime: '2020-07-01T' + activities[0].datetime.substring(11),
         isin: 'DE0009848119',
         company: 'DWS Top Dividende LD',
         shares: 0.126761,
@@ -99,12 +84,13 @@ describe('Broker: ebase', () => {
     });
 
     test('Can parse multiple buy and planned buy orders from a document', () => {
-      const activities = ebase.parsePages(buySamples[2]);
-      expect(activities.activities.length).toEqual(5);
-      expect(activities.activities[3]).toEqual({
+      const activities = ebase.parsePages(buySamples[2]).activities;
+      expect(activities.length).toEqual(5);
+      expect(activities[3]).toEqual({
         broker: 'ebase',
         type: 'Buy',
         date: '2020-07-24',
+        datetime: '2020-07-24T' + activities[0].datetime.substring(11),
         isin: 'DE000A2H7N24',
         company: 'The Digital Leaders Fund R',
         shares: 3.378835,
@@ -113,10 +99,11 @@ describe('Broker: ebase', () => {
         tax: 0.0,
         fee: 0.0,
       });
-      expect(activities.activities[4]).toEqual({
+      expect(activities[4]).toEqual({
         broker: 'ebase',
         type: 'Buy',
         date: '2020-07-01',
+        datetime: '2020-07-01T' + activities[0].datetime.substring(11),
         isin: 'DE000A2H7N24',
         company: 'The Digital Leaders Fund R',
         shares: 0.339997,
@@ -130,12 +117,13 @@ describe('Broker: ebase', () => {
 
   describe('Validate sells', () => {
     test('Can parse multiple eremuneration sell orders from a document', () => {
-      const activities = ebase.parsePages(sellSamples[0]);
-      expect(activities.activities.length).toEqual(2);
-      expect(activities.activities[0]).toEqual({
+      const activities = ebase.parsePages(sellSamples[0]).activities;
+      expect(activities.length).toEqual(2);
+      expect(activities[0]).toEqual({
         broker: 'ebase',
         type: 'Sell',
         date: '2019-12-19',
+        datetime: '2019-12-19T' + activities[0].datetime.substring(11),
         isin: 'DE0009848119',
         company: 'DWS Top Dividende LD',
         shares: 0.343695,
@@ -144,10 +132,11 @@ describe('Broker: ebase', () => {
         tax: 0.0,
         fee: 0.0,
       });
-      expect(activities.activities[1]).toEqual({
+      expect(activities[1]).toEqual({
         broker: 'ebase',
         type: 'Sell',
         date: '2018-12-19',
+        datetime: '2018-12-19T' + activities[0].datetime.substring(11),
         isin: 'DE0009848119',
         company: 'DWS Top Dividende LD',
         shares: 0.394046,
@@ -159,12 +148,13 @@ describe('Broker: ebase', () => {
     });
 
     test('Can parse multiple ordinary sell orders from a document', () => {
-      const activities = ebase.parsePages(sellSamples[1]);
-      expect(activities.activities.length).toEqual(11);
-      expect(activities.activities[0]).toEqual({
+      const activities = ebase.parsePages(sellSamples[1]).activities;
+      expect(activities.length).toEqual(11);
+      expect(activities[0]).toEqual({
         broker: 'ebase',
         type: 'Sell',
         date: '2020-09-23',
+        datetime: '2020-09-23T' + activities[0].datetime.substring(11),
         isin: 'FR0000292278',
         company: 'Magellan C',
         shares: 18.014988,
@@ -173,10 +163,11 @@ describe('Broker: ebase', () => {
         tax: 0.0,
         fee: 0.0,
       });
-      expect(activities.activities[10]).toEqual({
+      expect(activities[10]).toEqual({
         broker: 'ebase',
         type: 'Sell',
         date: '2020-09-22',
+        datetime: '2020-09-22T' + activities[0].datetime.substring(11),
         isin: 'DE0009848119',
         company: 'DWS Top Dividende LD',
         shares: 2.752834,
@@ -190,12 +181,13 @@ describe('Broker: ebase', () => {
 
   describe('Mixed Sells, buys and everything in between', () => {
     test('Can parse multiple sell orders from a document', () => {
-      const activities = ebase.parsePages(mixedSamples[0]);
-      expect(activities.activities.length).toEqual(327);
-      expect(activities.activities[11]).toEqual({
+      const activities = ebase.parsePages(mixedSamples[0]).activities;
+      expect(activities.length).toEqual(327);
+      expect(activities[11]).toEqual({
         broker: 'ebase',
         type: 'Buy',
         date: '2020-07-01',
+        datetime: '2020-07-01T' + activities[0].datetime.substring(11),
         isin: 'DE000A0X7541',
         company: 'ACATIS GANÉ VALUE EVENT FONDS A',
         shares: 0.054571,
