@@ -1,8 +1,9 @@
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
 import Big from 'big.js';
-
-import { parseGermanNum, validateActivity } from '@/helper';
+import {
+  parseGermanNum,
+  validateActivity,
+  createActivityDateTime,
+} from '@/helper';
 
 const findISINAndWKN = (text, spanISIN) => {
   // The line contains either WPKNR/ISIN or WKN/ISIN, depending on the document
@@ -21,20 +22,17 @@ const findCompany = (text, span) => {
 };
 
 const findDateBuySell = textArr => {
-  const dateLine = textArr[textArr.findIndex(t => t.includes('Geschäftstag'))];
-  const date = dateLine.split(/\s+/)[2];
-  return format(
-    parse(date, 'dd.MM.yyyy', new Date()),
-    'yyyy-MM-dd'
-  );
+  return textArr[textArr.findIndex(t => t.includes('Geschäftstag'))].split(
+    /\s+/
+  )[2];
 };
 
 const findDateDividend = textArr => {
   const dateLine = textArr[
     textArr.findIndex(t => t.includes('Valuta')) + 1
   ].split(/\s+/);
-  const date = dateLine[dateLine.length - 3];
-  return format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd');
+
+  return dateLine[dateLine.length - 3];
 };
 
 const findShares = textArr => {
@@ -238,10 +236,15 @@ const parseData = textArr => {
     fee = 0;
     tax = +findPayoutTax(textArr, fxRate);
   }
+
+  // Comdirect doesn't provide a order time...
+  const [parsedDate, parsedDateTime] = createActivityDateTime(date, undefined);
+
   let activity = {
     broker: 'comdirect',
     type,
-    date,
+    date: parsedDate,
+    datetime: parsedDateTime,
     isin,
     wkn,
     company,
@@ -251,12 +254,15 @@ const parseData = textArr => {
     fee,
     tax,
   };
+
   if (fxRate !== undefined) {
     activity.fxRate = fxRate;
   }
+
   if (foreignCurrency !== undefined) {
     activity.foreignCurrency = foreignCurrency;
   }
+
   return validateActivity(activity);
 };
 
