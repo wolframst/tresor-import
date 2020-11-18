@@ -1,8 +1,9 @@
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
 import Big from 'big.js';
-
-import { parseGermanNum, validateActivity } from '@/helper';
+import {
+  parseGermanNum,
+  validateActivity,
+  createActivityDateTime,
+} from '@/helper';
 
 const isPageTypeBuy = content =>
   content.some(line => line.includes('Wertpapierabrechnung: Kauf'));
@@ -45,6 +46,33 @@ const findOrderDate = content => {
 
   // For a saving plan, the order date is on another location
   return content[findLineNumberByContent(content, 'Handelsdatum') + 2];
+};
+
+const findOrderTime = content => {
+  // Extract the time after the line with order time which contains "06:24:26:12"
+  let orderTime =
+    content[
+      findLineNumberByCurrentAndPreviousLineContent(
+        content,
+        'Handels-',
+        'uhrzeit'
+      ) + 4
+    ];
+
+  if (orderTime !== undefined && orderTime.includes(':')) {
+    // The document is a normal market order
+    return orderTime.substring(0, 8);
+  }
+
+  // For a saving plan, the order date is on another location
+  orderTime = content[findLineNumberByContent(content, 'Handelsuhrzeit') + 2];
+
+  if (orderTime !== undefined && orderTime.includes(':')) {
+    // The document is a normal market order
+    return orderTime.substring(0, 8);
+  }
+
+  return undefined;
 };
 
 const findPayDate = content => {
@@ -193,13 +221,14 @@ export const canParsePage = (content, extension) =>
     isPageTypeDividend(content));
 
 const parsePage = content => {
-  let type, date, isin, company, shares, price, amount, fee, tax;
+  let type, date, time, isin, company, shares, price, amount, fee, tax;
 
   if (isPageTypeBuy(content)) {
     type = 'Buy';
     isin = findISIN(content);
     company = findCompany(content, false);
     date = findOrderDate(content);
+    time = findOrderTime(content);
     shares = findShares(content, false);
     amount = findAmount(content, 'Buy');
     price = findPricePerShare(content, false);
@@ -210,6 +239,7 @@ const parsePage = content => {
     isin = findISIN(content);
     company = findCompany(content, false);
     date = findOrderDate(content);
+    time = findOrderTime(content);
     shares = findShares(content, false);
     amount = findAmount(content, 'Sell');
     price = findPricePerShare(content, false);
@@ -229,6 +259,8 @@ const parsePage = content => {
     console.error('Unknown page type for Baader Bank');
   }
 
+  // console.warn(time);
+
   let broker = 'scalablecapital';
   if (isBrokerGratisbroker(content)) {
     broker = 'gratisbroker';
@@ -236,10 +268,13 @@ const parsePage = content => {
     broker = 'oskar';
   }
 
+  const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
+
   return validateActivity({
     broker,
     type,
-    date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
+    date: parsedDate,
+    datetime: parsedDateTime,
     isin,
     company,
     shares,
