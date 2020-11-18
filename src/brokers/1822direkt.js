@@ -1,8 +1,9 @@
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
 import Big from 'big.js';
-
-import { parseGermanNum, validateActivity } from '@/helper';
+import {
+  parseGermanNum,
+  validateActivity,
+  createActivityDateTime,
+} from '@/helper';
 
 export const isPageTypeBuy = content =>
   content.some(
@@ -27,6 +28,17 @@ export const findOrderDate = content => {
   }
 
   return value.split(' ')[0];
+};
+
+const findOrderTime = content => {
+  const lineValue =
+    content[findLineNumberByContent(content, 'Schlusstag/-Zeit') + 1];
+
+  if (!lineValue.includes(' ') || !lineValue.includes(':')) {
+    return undefined;
+  }
+
+  return lineValue.split(' ')[1];
 };
 
 export const findPayDate = content =>
@@ -80,7 +92,7 @@ export const canParsePage = (content, extension) =>
     isPageTypeDividend(content));
 
 export const parsePage = content => {
-  let type, date, isin, company, shares, price, amount, fee, tax;
+  let type, date, time, isin, company, shares, price, amount, fee, tax;
 
   if (isPageTypeBuy(content)) {
     const amountWithoutFees = Big(findAmount(content, false));
@@ -88,6 +100,7 @@ export const parsePage = content => {
     isin = findISIN(content);
     company = findCompany(content);
     date = findOrderDate(content);
+    time = findOrderTime(content);
     shares = findShares(content);
     amount = +amountWithoutFees;
     price = +amountWithoutFees.div(Big(shares));
@@ -99,6 +112,7 @@ export const parsePage = content => {
     isin = findISIN(content);
     company = findCompany(content, false);
     date = findOrderDate(content);
+    time = findOrderTime(content);
     shares = findShares(content, false);
     amount = +amountWithoutFees;
     price = +amountWithoutFees.div(Big(shares));
@@ -119,10 +133,13 @@ export const parsePage = content => {
     console.error('Unknown page type for 1822direkt');
   }
 
+  const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
+
   return validateActivity({
     broker: '1822direkt',
     type,
-    date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
+    date: parsedDate,
+    datetime: parsedDateTime,
     isin,
     company,
     shares,
