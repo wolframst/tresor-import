@@ -20,24 +20,22 @@ const findCompany = text => {
   return name_index_one;
 };
 
-const findDateBuySell = content => {
-  // Before 12/2015 the headline is 'Wertpapierabrechnung'
-  const lineNumber = content.findIndex(
+const findBuySellLineNumber = content => {
+  return content.findIndex(
     line =>
       line.toLowerCase() === 'orderabrechnung' ||
       line.toLowerCase() === 'wertpapierabrechnung'
   );
-  return content[lineNumber + 2].substr(3, 10).trim();
+};
+
+const findDateBuySell = content => {
+  // Before 12/2015 the headline is 'Wertpapierabrechnung'
+  return content[findBuySellLineNumber(content) + 2].substr(3, 10).trim();
 };
 
 const findOrderTime = content => {
   // Extract the time after the line with order time which contains "15:57:49"
-  const lineNumber = content.findIndex(
-    line =>
-      line.toLowerCase() === 'orderabrechnung' ||
-      line.toLowerCase() === 'wertpapierabrechnung'
-  );
-  const lineContent = content[lineNumber + 4];
+  const lineContent = content[findBuySellLineNumber(content) + 4];
 
   if (lineContent === undefined || !lineContent.includes(':')) {
     return undefined;
@@ -152,22 +150,14 @@ const findDividendTax = textArr => {
 
 const isBuy = textArr => {
   // Before 12/2015 the headline is 'Wertpapierabrechnung'
-  const idx = textArr.findIndex(
-    t =>
-      t.toLowerCase() === 'orderabrechnung' ||
-      t.toLowerCase() === 'wertpapierabrechnung'
-  );
-  return idx >= 0 && textArr[idx + 1].toLowerCase() === 'kauf';
+  const lineNumber = findBuySellLineNumber(textArr);
+  return lineNumber >= 0 && textArr[lineNumber + 1].toLowerCase() === 'kauf';
 };
 
 const isSell = textArr => {
   // Before 12/2015 the headline is 'Wertpapierabrechnung'
-  const idx = textArr.findIndex(
-    t =>
-      t.toLowerCase() === 'orderabrechnung' ||
-      t.toLowerCase() === 'wertpapierabrechnung'
-  );
-  return idx >= 0 && textArr[idx + 1].toLowerCase() === 'verkauf';
+  const lineNumber = findBuySellLineNumber(textArr);
+  return lineNumber >= 0 && textArr[lineNumber + 1].toLowerCase() === 'verkauf';
 };
 
 const isDividend = textArr =>
