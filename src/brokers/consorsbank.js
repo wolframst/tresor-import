@@ -1,11 +1,9 @@
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
 import Big from 'big.js';
-
 import {
   parseGermanNum,
   validateActivity,
   findFirstIsinIndexInArray,
+  createActivityDateTime,
 } from '@/helper';
 
 const findISIN = text => {
@@ -22,10 +20,30 @@ const findCompany = text => {
   return name_index_one;
 };
 
-const findDateBuySell = textArr => {
+const findDateBuySell = content => {
   // Before 12/2015 the headline is 'Wertpapierabrechnung'
-  const idx = textArr.findIndex(t => t.toLowerCase() === 'orderabrechnung' || t.toLowerCase() === 'wertpapierabrechnung');
-  return textArr[idx + 2].substr(3, 10).trim();
+  const lineNumber = content.findIndex(
+    line =>
+      line.toLowerCase() === 'orderabrechnung' ||
+      line.toLowerCase() === 'wertpapierabrechnung'
+  );
+  return content[lineNumber + 2].substr(3, 10).trim();
+};
+
+const findOrderTime = content => {
+  // Extract the time after the line with order time which contains "15:57:49"
+  const lineNumber = content.findIndex(
+    line =>
+      line.toLowerCase() === 'orderabrechnung' ||
+      line.toLowerCase() === 'wertpapierabrechnung'
+  );
+  const lineContent = content[lineNumber + 4];
+
+  if (lineContent === undefined || !lineContent.includes(':')) {
+    return undefined;
+  }
+
+  return lineContent.trim();
 };
 
 const findDateDividend = textArr => {
@@ -134,13 +152,21 @@ const findDividendTax = textArr => {
 
 const isBuy = textArr => {
   // Before 12/2015 the headline is 'Wertpapierabrechnung'
-  const idx = textArr.findIndex(t => t.toLowerCase() === 'orderabrechnung' || t.toLowerCase() === 'wertpapierabrechnung');
+  const idx = textArr.findIndex(
+    t =>
+      t.toLowerCase() === 'orderabrechnung' ||
+      t.toLowerCase() === 'wertpapierabrechnung'
+  );
   return idx >= 0 && textArr[idx + 1].toLowerCase() === 'kauf';
 };
 
 const isSell = textArr => {
   // Before 12/2015 the headline is 'Wertpapierabrechnung'
-  const idx = textArr.findIndex(t => t.toLowerCase() === 'orderabrechnung' || t.toLowerCase() === 'wertpapierabrechnung');
+  const idx = textArr.findIndex(
+    t =>
+      t.toLowerCase() === 'orderabrechnung' ||
+      t.toLowerCase() === 'wertpapierabrechnung'
+  );
   return idx >= 0 && textArr[idx + 1].toLowerCase() === 'verkauf';
 };
 
@@ -173,13 +199,14 @@ export const canParsePage = (content, extension) => {
 };
 
 const parseData = textArr => {
-  let type, date, isin, company, shares, price, amount, fee, tax;
+  let type, date, time, isin, company, shares, price, amount, fee, tax;
 
   if (isBuy(textArr)) {
     type = 'Buy';
     isin = findISIN(textArr);
     company = findCompany(textArr);
     date = findDateBuySell(textArr);
+    time = findOrderTime(textArr);
     shares = findShares(textArr);
     amount = findAmount(textArr, 'Buy');
     price = +Big(amount).div(Big(shares));
@@ -190,6 +217,7 @@ const parseData = textArr => {
     isin = findISIN(textArr);
     company = findCompany(textArr);
     date = findDateBuySell(textArr);
+    time = findOrderTime(textArr);
     shares = findShares(textArr);
     amount = findAmount(textArr, 'Sell');
     price = +Big(amount).div(Big(shares));
@@ -207,10 +235,13 @@ const parseData = textArr => {
     tax = findDividendTax(textArr);
   }
 
+  const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
+
   return validateActivity({
     broker: 'consorsbank',
     type,
-    date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
+    date: parsedDate,
+    datetime: parsedDateTime,
     isin,
     company,
     shares,
