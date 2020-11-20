@@ -1,7 +1,8 @@
 export const buySamples = [
   require('./buy/ansparplan_single_pdfpage.json'),
   require('./buy/ansparplan_multi_pdfpage.json'),
-  require('./buy/buy_single_pdfpage.json')
+  require('./buy/buy_single_pdfpage.json'),
+  require('./buy/finvesto_buy_multi_pdfpage.json'),
 ];
 
 export const sellSamples = [
@@ -11,6 +12,7 @@ export const sellSamples = [
 
 export const mixedSamples = [
   require('./mixed_transactions/mixed_transactions_multi_pdfpage.json'),
+  require('./mixed_transactions/finvesto_mixed_transactions_multi_pdfpage.json'),
 ];
 
 export const invalidSamples = [

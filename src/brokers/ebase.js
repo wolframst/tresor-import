@@ -31,7 +31,10 @@ const parseNumberBeforeSpace = input => {
 };
 
 function parseBaseAction(pdfArray, pdfOffset, actionType) {
-  const activity = {
+  let foreignCurrencyOffset = 0;
+  // In this case there is a foreign currency involved and the amount will be
+  // at another offset
+  let activity = {
     broker: 'ebase',
     type: actionType,
     date: format(
@@ -41,11 +44,18 @@ function parseBaseAction(pdfArray, pdfOffset, actionType) {
     isin: pdfArray[pdfOffset + 2],
     company: pdfArray[pdfOffset + 1],
     shares: parseShare(pdfArray[pdfOffset + 4]),
-    price: parseNumberBeforeSpace(pdfArray[pdfOffset + 5]),
-    amount: parseNumberBeforeSpace(pdfArray[pdfOffset + 7]),
     tax: 0,
     fee: 0,
-  };
+  }
+  activity.price = parseNumberBeforeSpace(pdfArray[pdfOffset + 5]);
+  if ( pdfArray[pdfOffset + 8].includes('/') ) {
+    foreignCurrencyOffset = 2;
+    activity.fxRate = parseGermanNum(pdfArray[pdfOffset + 7]);
+    activity.foreignCurrency = pdfArray[pdfOffset + 8].split('/')[1];
+    activity.price = +Big(activity.price).div(activity.fxRate);
+  }
+  activity.amount = parseNumberBeforeSpace(pdfArray[pdfOffset + 7 + foreignCurrencyOffset])
+
   return validateActivity(activity);
 }
 
@@ -101,7 +111,7 @@ export const parseData = pdfPages => {
 
 export const canParsePage = (content, extension) =>
   extension === 'pdf' &&
-  content.some(line => line.includes('ebase Depot')) &&
+  ( content.some(line => line.includes('ebase Depot')) || content.some(line => line.includes('finvesto Depot')) ) &&
   content.some(line => line.includes('Fondsertrag / Vorabpauschale'));
 
 export const parsePages = contents => {

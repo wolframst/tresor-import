@@ -126,6 +126,39 @@ describe('Broker: ebase', () => {
         fee: 0.0,
       });
     });
+
+    test('Can parse multiple buy orders from a finvesto document', () => {
+      const activities = ebase.parsePages(buySamples[3]);
+      expect(activities.activities.length).toEqual(21);
+      expect(activities.activities[0]).toEqual({
+        broker: 'ebase',
+        type: 'Buy',
+        date: '2020-10-30',
+        isin: 'IE00B4L5Y983',
+        company: 'iShares Core MSCI World UCITS ETF USD (Acc)',
+        shares: 0.747824,
+        price: 53.38151781104801,
+        amount: 40.0,
+        tax: 0.0,
+        fee: 0.0,
+        foreignCurrency: 'USD',
+        fxRate: 1.1622
+      });
+      expect(activities.activities[20]).toEqual({
+        broker: 'ebase',
+        type: 'Buy',
+        date: '2019-11-21',
+        isin: 'IE00B4L5Y983',
+        company: 'iShares Core MSCI World UCITS ETF USD (Acc)',
+        shares: 0.906280,
+        price: 55.061169007702766,
+        amount: 50,
+        tax: 0.0,
+        fee: 0.0,
+        foreignCurrency: 'USD',
+        fxRate: 1.1035
+      });
+    });
   });
 
   describe('Validate sells', () => {
@@ -189,7 +222,7 @@ describe('Broker: ebase', () => {
   });
 
   describe('Mixed Sells, buys and everything in between', () => {
-    test('Can parse multiple sell orders from a document', () => {
+    test('Can parse multiple sell orders from a ebase file', () => {
       const activities = ebase.parsePages(mixedSamples[0]);
       expect(activities.activities.length).toEqual(327);
       expect(activities.activities[11]).toEqual({
@@ -205,7 +238,43 @@ describe('Broker: ebase', () => {
         fee: 0.0,
       });
     });
+
+    test('Can parse buy and sell orders from a finvesto file', () => {
+      const activities = ebase.parsePages(mixedSamples[1]);
+      expect(activities.activities.length).toEqual(34);
+      expect(activities.activities[33]).toEqual({
+        broker: 'ebase',
+        type: 'Buy',
+        date: '2018-03-27',
+        isin: 'LU0274208692',
+        company: 'Xtrackers MSCI World Swap UCITS ETF 1C',
+        shares: 0.863757,
+        price: 46.31127649247694,
+        amount: 40.0,
+        tax: 0.0,
+        fee: 0.0,
+        fxRate: 1.2362,
+        foreignCurrency: 'USD',
+      });
+
+      expect(activities.activities[11]).toEqual({
+        broker: 'ebase',
+        type: 'Sell',
+        date: '2019-12-19',
+        isin: 'LU0274208692',
+        company: 'Xtrackers MSCI World Swap UCITS ETF 1C',
+        shares: 0.164912,
+        price: 60.63982746225737,
+        amount: 10.0,
+        tax: 0.0,
+        fee: 0.0,
+        fxRate: 1.112800,
+        foreignCurrency: 'USD',
+      });
+    });
   });
+
+
 
   beforeEach(() => {
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
