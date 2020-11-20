@@ -171,7 +171,10 @@ const findTax = textArr => {
   const withholdingTaxLine = textArr.findIndex(line =>
     line.includes(searchTermWithholdingTax)
   );
-  if (withholdingTaxLine > -1 && !textArr[withholdingTaxLine+1].includes('EUR')) {
+  if (
+    withholdingTaxLine > -1 &&
+    !textArr[withholdingTaxLine + 1].includes('EUR')
+  ) {
     const lineWithValue = textArr[withholdingTaxLine + 1];
     totalTax = totalTax.plus(findAndConvertNumber(lineWithValue, textArr));
   }
@@ -202,7 +205,7 @@ export const canParsePage = (content, extension) =>
     isDividend(content) ||
     isOverviewStatement(content));
 
-export const parsePositionAsActivity = (content, startLineNumber) => {
+const parsePositionAsActivity = (content, startLineNumber) => {
   // Find the line with ISIN and the next line with the date
   let lineNumberOfISIN;
   let lineOfDate;
@@ -243,7 +246,7 @@ export const parsePositionAsActivity = (content, startLineNumber) => {
   };
 };
 
-export const parseOrderOrDividend = textArr => {
+const parseOrderOrDividend = textArr => {
   let type, date, isin, company, shares, price, amount, tax, fee;
 
   if (isBuySingle(textArr) || isBuySavingsPlan(textArr)) {
@@ -288,7 +291,7 @@ export const parseOrderOrDividend = textArr => {
   };
 };
 
-export const parsePage = content => {
+const parsePage = content => {
   let foundActivities = [];
   if (
     isBuySingle(content) ||

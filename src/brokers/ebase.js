@@ -59,7 +59,7 @@ function parseBaseAction(pdfArray, pdfOffset, actionType) {
   return validateActivity(activity);
 }
 
-export const parseData = pdfPages => {
+const parseData = pdfPages => {
   // Action can be: Fondsertrag (Ausschüttung), Ansparplan, Wiederanlage Fondsertrag, Entgelt Verkauf
   let actions = [];
   for (const pdfPage of pdfPages) {
