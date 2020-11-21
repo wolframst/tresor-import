@@ -71,7 +71,7 @@ const findOrderTime = (textArr, startLineNumer) => {
     0,
     'Ausführungszeit'
   );
-  // console.warn(lineWithExecutionTime, lineWithExecutionTime.split(' '), lineWithExecutionTime.split(' ')[0])
+
   if (lineWithExecutionTime === null || !lineWithExecutionTime.includes(':')) {
     return undefined;
   }
