@@ -8,9 +8,7 @@ export const buySamples = [
   require('./buy/purchase_eur_alibaba_group.json'),
 ];
 
-export const sellSamples = [
-  // require('./sell/something.json'),
-];
+export const sellSamples = [require('./sell/sell_eur_stock_biontech.json')];
 
 export const dividendSamples = [
   require('./dividend/currency_usd.json'),
@@ -18,4 +16,4 @@ export const dividendSamples = [
   require('./dividend/dividend_usd_stryker_corp.json'),
 ];
 
-export const allSamples = buySamples.concat(sellSamples, dividendSamples)
+export const allSamples = buySamples.concat(sellSamples, dividendSamples);

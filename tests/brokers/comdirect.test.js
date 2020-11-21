@@ -1,7 +1,12 @@
 import Big from 'big.js';
 import { findImplementation } from '@/index';
 import * as comdirect from '../../src/brokers/comdirect';
-import { allSamples, buySamples, dividendSamples } from './__mocks__/comdirect';
+import {
+  allSamples,
+  buySamples,
+  sellSamples,
+  dividendSamples,
+} from './__mocks__/comdirect';
 
 describe('Broker: comdirect', () => {
   let consoleErrorSpy;
@@ -171,6 +176,27 @@ describe('Broker: comdirect', () => {
     });
   });
 
+  describe('Validate Sells', () => {
+    test('Can the order parsed from saving_plan', () => {
+      const activities = comdirect.parsePages(sellSamples[0]).activities;
+
+      expect(activities.length).toEqual(1);
+      expect(activities[0]).toEqual({
+        broker: 'comdirect',
+        type: 'Sell',
+        date: '2020-03-18',
+        datetime: '2020-03-18T' + activities[0].datetime.substring(11),
+        isin: 'US09075V1026',
+        wkn: 'A2PSR2',
+        company: 'BioNTech SE',
+        shares: 250,
+        price: 89.2,
+        amount: 22300,
+        fee: 68.2,
+        tax: 3858.01,
+      });
+    });
+  });
   describe('Validate dividends', () => {
     test('Can the dividend in USD parsed from the document', () => {
       const activities = comdirect.parsePages(dividendSamples[0]).activities;

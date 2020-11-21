@@ -8,7 +8,7 @@ import {
 
 export const canParsePage = content => content.includes('www.degiro.de');
 
-export const parseActivity = (content, index) => {
+const parseActivity = (content, index) => {
   const foreignCurrencyOffset = content[index + 6] === 'EUR' ? 0 : 1;
   const company = content[index + 2];
   const isin = content[index + 3];
