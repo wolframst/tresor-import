@@ -259,8 +259,6 @@ const parsePage = content => {
     console.error('Unknown page type for Baader Bank');
   }
 
-  // console.warn(time);
-
   let broker = 'scalablecapital';
   if (isBrokerGratisbroker(content)) {
     broker = 'gratisbroker';
