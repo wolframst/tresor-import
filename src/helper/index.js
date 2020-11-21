@@ -1,7 +1,5 @@
 import every from 'lodash/every';
 import values from 'lodash/values';
-import parse from 'date-fns/parse';
-import format from 'date-fns/format';
 import { DateTime } from 'luxon';
 
 //regex to match an ISIN-only string, taken from https://www.iban.com/country-codes
