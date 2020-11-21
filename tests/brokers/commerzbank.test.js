@@ -193,7 +193,7 @@ describe('Broker: commerzbank', () => {
   });
 
   describe('Validate transaction records', () => {
-    test('Can the dividend for  be parsed correctly', () => {
+    test('Can multiple transactions from a transaction record be parsed', () => {
       const result = commerzbank.parsePages(transactionReport[0]);
 
       expect(result.activities.length).toEqual(43);
