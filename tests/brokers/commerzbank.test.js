@@ -4,6 +4,7 @@ import {
   allSamples,
   buySamples,
   dividendSamples,
+  transactionReport,
 } from './__mocks__/commerzbank';
 
 describe('Broker: commerzbank', () => {
@@ -188,6 +189,114 @@ describe('Broker: commerzbank', () => {
         fee: 0,
         tax: 0,
       });
+    });
+  });
+
+  describe('Validate transaction records', () => {
+    test('Can the dividend for  be parsed correctly', () => {
+      const result = commerzbank.parsePages(transactionReport[0]);
+
+      expect(result.activities.length).toEqual(43);
+      // Buy in home currency
+      expect(result.activities[0]).toEqual({
+        broker: 'commerzbank',
+        type: 'Buy',
+        date: '2020-11-18',
+        isin: 'US69608A1088',
+        wkn: 'A2QA4J',
+        company: 'PALANTIR TECHNOLOGIES INC',
+        shares: 200,
+        price: 13.7,
+        amount: 2740,
+        fee: 15.45,
+        tax: 0,
+      });
+      // Buy in USD which is a foreign currency
+      expect(result.activities[3]).toEqual({
+        broker: 'commerzbank',
+        type: 'Buy',
+        date: '2020-11-12',
+        isin: 'US29786A1060',
+        wkn: 'A14P98',
+        company: 'ETSY INC. DL-,001',
+        shares: 20,
+        price: 111.25647778438535,
+        amount: 2225.13,
+        foreignCurrency: 'USD',
+        fxRate: 1.177100,
+        fee: 11.9,
+        tax: 0,
+      });
+      // Sell in home currency
+      expect(result.activities[9]).toEqual({
+        broker: 'commerzbank',
+        type: 'Sell',
+        date: '2020-11-04',
+        isin: 'DE000TT3W567',
+        wkn: 'TT3W56',
+        company: 'HSBC T+B TURBOP DAX',
+        shares: 500,
+        price: 10.74,
+        amount: 5370,
+        fee: 0,
+        tax: 24.25,
+      });
+      // Payout in foreign currency (USD)
+      expect(result.activities[4]).toEqual({
+        broker: 'commerzbank',
+        type: 'Dividend',
+        date: '2020-11-16',
+        isin: 'US0378331005',
+        wkn: '865985',
+        company: 'APPLE INC.',
+        shares: 50,
+        price: 0.17314189189189189,
+        amount: 8.657094594594595,
+        foreignCurrency: 'USD',
+        fxRate: 1.184000,
+        fee: 0,
+        tax: 1.297094594594595,
+      });
+      // Payout in home currency (Here EUR)
+      expect(result.activities[8]).toEqual({
+        broker: 'commerzbank',
+        type: 'Dividend',
+        date: '2020-11-13',
+        isin: 'NL0010273215',
+        wkn: 'A1J4U4',
+        company: 'ASML HOLDING EO -,09',
+        shares: 8,
+        price: 1.2,
+        amount: 9.6,
+        fee: 0,
+        tax: 1.44,
+      });
+
+      /*// TransferIn test
+      expect(result.activities[40]).toEqual({
+        broker: 'commerzbank',
+        type: 'TransferIn',
+        date: '2020-09-02',
+        isin: 'US88160R1014',
+        wkn: 'A1CX3T',
+        company: 'TESLA INC. DL -,001',
+        shares: 50,
+        fee: 0,
+        tax: 0,
+      });
+      // TransferOut; for some reason it contains a fxRate but no price/amount/currency
+      expect(result.activities[41]).toEqual({
+        broker: 'commerzbank',
+        type: 'TransferOut',
+        date: '2020-09-02',
+        isin: 'US88160R1014',
+        wkn: 'A1J4U4',
+        company: 'TESLA INC. DL -,001',
+        shares: 10,
+        fxRate: 1.192,
+        fee: 0,
+        tax: 0,
+      }); */
     });
   });
 
