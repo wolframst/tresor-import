@@ -258,7 +258,12 @@ export const parsePages = content => {
   }
 
   const [fxRate, foreignCurrency] = findForeignCurrencyFxRate(pdfPagesConcat);
-  const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
+  const [parsedDate, parsedDateTime] = createActivityDateTime(
+    date,
+    time,
+    'dd.MM.yyyy',
+    'dd.MM.yyyy HH:mm:ss'
+  );
 
   let activity = {
     broker: broker,

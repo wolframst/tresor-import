@@ -204,7 +204,12 @@ export const parsePages = pages => {
     tax = findTax(pages);
   }
 
-  const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
+  const [parsedDate, parsedDateTime] = createActivityDateTime(
+    date,
+    time,
+    'dd.MM.yyyy',
+    'dd.MM.yyyy HH:mm:ss'
+  );
 
   return {
     activities: [

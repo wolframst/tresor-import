@@ -131,9 +131,15 @@ export const parsePage = content => {
     tax = +Big(amountWithoutTaxes).minus(findAmount(content, true));
   } else {
     console.error('Unknown page type for 1822direkt');
+    return undefined;
   }
 
-  const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
+  const [parsedDate, parsedDateTime] = createActivityDateTime(
+    date,
+    time,
+    'dd.MM.yyyy',
+    'dd.MM.yyyy HH:mm:ss'
+  );
 
   return validateActivity({
     broker: '1822direkt',
@@ -155,7 +161,12 @@ export const parsePages = contents => {
 
   for (let content of contents) {
     try {
-      activities.push(parsePage(content));
+      const activity = parsePage(content);
+      if (activity === undefined) {
+        continue;
+      }
+
+      activities.push(activity);
     } catch (exception) {
       console.error(
         'Error while parsing page (1822direkt)',

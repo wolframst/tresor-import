@@ -28,7 +28,8 @@ const activityNormalizer = typeKeyMap => activity => {
   const [parsedDate, parsedDateTime] = createActivityDateTime(
     activity.date.substring(0, 10),
     activity.date.substring(11, 16),
-    'yyyy-MM-dd'
+    'yyyy-MM-dd',
+    'yyyy-MM-dd HH:mm'
   );
 
   activity = {

@@ -29,7 +29,8 @@ export const parseActivity = (content, index) => {
   const [parsedDate, parsedDateTime] = createActivityDateTime(
     content[index],
     content[index + 1],
-    'dd-MM-yyyy'
+    'dd-MM-yyyy',
+    'dd-MM-yyyy HH:mm'
   );
 
   return validateActivity({

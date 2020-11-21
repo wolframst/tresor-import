@@ -268,7 +268,12 @@ const parsePage = content => {
     broker = 'oskar';
   }
 
-  const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
+  const [parsedDate, parsedDateTime] = createActivityDateTime(
+    date,
+    time,
+    'dd.MM.yyyy',
+    'dd.MM.yyyy HH:mm:ss'
+  );
 
   return validateActivity({
     broker,
