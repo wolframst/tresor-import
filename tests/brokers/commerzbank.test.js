@@ -223,7 +223,7 @@ describe('Broker: commerzbank', () => {
         price: 111.25647778438535,
         amount: 2225.13,
         foreignCurrency: 'USD',
-        fxRate: 1.177100,
+        fxRate: 1.1771,
         fee: 11.9,
         tax: 0,
       });
@@ -253,7 +253,7 @@ describe('Broker: commerzbank', () => {
         price: 0.17314189189189189,
         amount: 8.657094594594595,
         foreignCurrency: 'USD',
-        fxRate: 1.184000,
+        fxRate: 1.184,
         fee: 0,
         tax: 1.297094594594595,
       });
