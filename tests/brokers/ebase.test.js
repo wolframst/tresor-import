@@ -1,17 +1,17 @@
-import { findImplementation } from '@/index'
-import * as ebase from '../../src/brokers/ebase'
+import { findImplementation } from '@/index';
+import * as ebase from '../../src/brokers/ebase';
 import {
   buySamples,
   invalidSamples,
   mixedSamples,
-  sellSamples
-} from './__mocks__/ebase'
-import { canParsePage } from '@/brokers/ebase'
-import { allValidSamples } from './__mocks__/ebase'
+  sellSamples,
+} from './__mocks__/ebase';
+import { canParsePage } from '@/brokers/ebase';
+import { allValidSamples } from './__mocks__/ebase';
 
 // David Holin: No dividend samples test yet, as no example document is available
 describe('Broker: ebase', () => {
-  let consoleErrorSpy
+  let consoleErrorSpy;
 
   test('should only accept revenue-summary reports', () => {
     expect(
@@ -19,42 +19,42 @@ describe('Broker: ebase', () => {
         ['Fondsertrag / Vorabpauschale', 'ebase Depot flex standard'],
         'pdf'
       )
-    ).toEqual(true)
-  })
+    ).toEqual(true);
+  });
 
   test('should reject unknown PDF files', () => {
     expect(
       canParsePage(['This String should never occur in a legitimate document'])
-    ).toEqual(false)
-  })
+    ).toEqual(false);
+  });
 
   test('should validate the result', () => {
-    expect(ebase.parsePages(invalidSamples[0]).activities).toEqual(undefined)
-  })
+    expect(ebase.parsePages(invalidSamples[0]).activities).toEqual(undefined);
+  });
 
   describe('Check all documents', () => {
     test('Can parse one page containing sell orders with ebase', () => {
       sellSamples.forEach(samples => {
         expect(samples.some(item => ebase.canParsePage(item, 'pdf'))).toEqual(
           true
-        )
-      })
-    })
+        );
+      });
+    });
 
     test('Can identify a broker from one page as ebase', () => {
       allValidSamples.forEach(samples => {
-        const implementations = findImplementation(samples, 'pdf')
+        const implementations = findImplementation(samples, 'pdf');
 
-        expect(implementations.length).toEqual(1)
-        expect(implementations[0]).toEqual(ebase)
-      })
-    })
-  })
+        expect(implementations.length).toEqual(1);
+        expect(implementations[0]).toEqual(ebase);
+      });
+    });
+  });
 
   describe('Validate buys', () => {
     test('Can parse multiple planned buy orders from a document', () => {
-      const activities = ebase.parsePages(buySamples[0])
-      expect(activities.activities.length).toEqual(11)
+      const activities = ebase.parsePages(buySamples[0]);
+      expect(activities.activities.length).toEqual(11);
       expect(activities.activities[0]).toEqual({
         broker: 'ebase',
         type: 'Buy',
@@ -65,8 +65,8 @@ describe('Broker: ebase', () => {
         price: 311.52,
         amount: 17.0,
         tax: 0.0,
-        fee: 0.0
-      })
+        fee: 0.0,
+      });
       expect(activities.activities[10]).toEqual({
         broker: 'ebase',
         type: 'Buy',
@@ -77,13 +77,13 @@ describe('Broker: ebase', () => {
         price: 120.7,
         amount: 15.3,
         tax: 0.0,
-        fee: 0.0
-      })
-    })
+        fee: 0.0,
+      });
+    });
 
     test('Can parse multiple buy and planned buy orders from a document', () => {
-      const activities = ebase.parsePages(buySamples[2])
-      expect(activities.activities.length).toEqual(5)
+      const activities = ebase.parsePages(buySamples[2]);
+      expect(activities.activities.length).toEqual(5);
       expect(activities.activities[3]).toEqual({
         broker: 'ebase',
         type: 'Buy',
@@ -94,8 +94,8 @@ describe('Broker: ebase', () => {
         price: 147.98,
         amount: 500.0,
         tax: 0.0,
-        fee: 0.0
-      })
+        fee: 0.0,
+      });
       expect(activities.activities[4]).toEqual({
         broker: 'ebase',
         type: 'Buy',
@@ -106,13 +106,13 @@ describe('Broker: ebase', () => {
         price: 147.06,
         amount: 50,
         tax: 0.0,
-        fee: 0.0
-      })
-    })
+        fee: 0.0,
+      });
+    });
 
     test('Can parse multiple buy orders from a finvesto document', () => {
-      const activities = ebase.parsePages(buySamples[3])
-      expect(activities.activities.length).toEqual(21)
+      const activities = ebase.parsePages(buySamples[3]);
+      expect(activities.activities.length).toEqual(21);
       expect(activities.activities[0]).toEqual({
         broker: 'ebase',
         type: 'Buy',
@@ -125,8 +125,8 @@ describe('Broker: ebase', () => {
         tax: 0.0,
         fee: 0.0,
         foreignCurrency: 'USD',
-        fxRate: 1.1622
-      })
+        fxRate: 1.1622,
+      });
       expect(activities.activities[20]).toEqual({
         broker: 'ebase',
         type: 'Buy',
@@ -139,15 +139,15 @@ describe('Broker: ebase', () => {
         tax: 0.0,
         fee: 0.0,
         foreignCurrency: 'USD',
-        fxRate: 1.1035
-      })
-    })
-  })
+        fxRate: 1.1035,
+      });
+    });
+  });
 
   describe('Validate sells', () => {
     test('Can parse multiple eremuneration sell orders from a document', () => {
-      const activities = ebase.parsePages(sellSamples[0])
-      expect(activities.activities.length).toEqual(2)
+      const activities = ebase.parsePages(sellSamples[0]);
+      expect(activities.activities.length).toEqual(2);
       expect(activities.activities[0]).toEqual({
         broker: 'ebase',
         type: 'Sell',
@@ -158,8 +158,8 @@ describe('Broker: ebase', () => {
         price: 130.93,
         amount: 45.0,
         tax: 0.0,
-        fee: 0.0
-      })
+        fee: 0.0,
+      });
       expect(activities.activities[1]).toEqual({
         broker: 'ebase',
         type: 'Sell',
@@ -170,13 +170,13 @@ describe('Broker: ebase', () => {
         price: 114.2,
         amount: 45.0,
         tax: 0.0,
-        fee: 0.0
-      })
-    })
+        fee: 0.0,
+      });
+    });
 
     test('Can parse multiple ordinary sell orders from a document', () => {
-      const activities = ebase.parsePages(sellSamples[1])
-      expect(activities.activities.length).toEqual(11)
+      const activities = ebase.parsePages(sellSamples[1]);
+      expect(activities.activities.length).toEqual(11);
       expect(activities.activities[0]).toEqual({
         broker: 'ebase',
         type: 'Sell',
@@ -187,8 +187,8 @@ describe('Broker: ebase', () => {
         price: 23.17,
         amount: 373.54,
         tax: 0.0,
-        fee: 0.0
-      })
+        fee: 0.0,
+      });
       expect(activities.activities[10]).toEqual({
         broker: 'ebase',
         type: 'Sell',
@@ -199,15 +199,15 @@ describe('Broker: ebase', () => {
         price: 114.58,
         amount: 315.42,
         tax: 0.0,
-        fee: 0.0
-      })
-    })
-  })
+        fee: 0.0,
+      });
+    });
+  });
 
   describe('Mixed Sells, buys and everything in between', () => {
     test('Can parse multiple sell orders from a ebase file', () => {
-      const activities = ebase.parsePages(mixedSamples[0])
-      expect(activities.activities.length).toEqual(327)
+      const activities = ebase.parsePages(mixedSamples[0]);
+      expect(activities.activities.length).toEqual(327);
       expect(activities.activities[11]).toEqual({
         broker: 'ebase',
         type: 'Buy',
@@ -218,13 +218,13 @@ describe('Broker: ebase', () => {
         price: 311.52,
         amount: 17.0,
         tax: 0.0,
-        fee: 0.0
-      })
-    })
+        fee: 0.0,
+      });
+    });
 
     test('Can parse buy and sell orders from a finvesto file', () => {
-      const activities = ebase.parsePages(mixedSamples[1])
-      expect(activities.activities.length).toEqual(34)
+      const activities = ebase.parsePages(mixedSamples[1]);
+      expect(activities.activities.length).toEqual(34);
       expect(activities.activities[33]).toEqual({
         broker: 'ebase',
         type: 'Buy',
@@ -237,8 +237,8 @@ describe('Broker: ebase', () => {
         tax: 0.0,
         fee: 0.0,
         fxRate: 1.2362,
-        foreignCurrency: 'USD'
-      })
+        foreignCurrency: 'USD',
+      });
 
       expect(activities.activities[11]).toEqual({
         broker: 'ebase',
@@ -252,16 +252,16 @@ describe('Broker: ebase', () => {
         tax: 0.0,
         fee: 0.0,
         fxRate: 1.1128,
-        foreignCurrency: 'USD'
-      })
-    })
-  })
+        foreignCurrency: 'USD',
+      });
+    });
+  });
 
   beforeEach(() => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
-  })
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+  });
 
   afterEach(() => {
-    consoleErrorSpy.mockRestore()
-  })
-})
+    consoleErrorSpy.mockRestore();
+  });
+});
