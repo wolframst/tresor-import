@@ -38,6 +38,28 @@ const findDateDividend = textArr => {
   return dateLine[dateLine.length - 3];
 };
 
+const findOrderTime = content => {
+  // Extract the time from a string like this: "Handelszeit       : 15:30 Uhr (MEZ/MESZ)                  (Kommissionsgeschäft)"
+  const searchTerm = 'Handelszeit';
+  const lineNumber = content.findIndex(t => t.includes(searchTerm));
+
+  // Some documents have the time on the same line as `Handelszeit`
+  if (lineNumber >= 0 && content[lineNumber].includes(':')) {
+    return (
+      content[lineNumber].split(':')[1].trim() +
+      ':' +
+      content[lineNumber].split(':')[2].trim().substring(0, 2)
+    );
+  }
+
+  // and some on two lines after `Handelszeit`
+  if (lineNumber >= 0 && content[lineNumber + 2].includes(':')) {
+    return content[lineNumber + 2].split(' ')[0];
+  }
+
+  return undefined;
+};
+
 const findShares = textArr => {
   // for sells that are split into multiple sellorders, we want to get all
   // sell shares at once
@@ -228,6 +250,7 @@ export const canParsePage = (content, extension) =>
 const parseData = textArr => {
   let type,
     date,
+    time,
     isin,
     wkn,
     company,
@@ -242,6 +265,7 @@ const parseData = textArr => {
   if (isBuy(textArr)) {
     type = 'Buy';
     date = findDateBuySell(textArr);
+    time = findOrderTime(textArr);
     [fxRate, foreignCurrency] = findBuyFxRateForeignCurrency(textArr);
     [isin, wkn] = findISINAndWKN(textArr, 2, 1);
     company = findCompany(textArr, type);
@@ -255,6 +279,7 @@ const parseData = textArr => {
     [isin, wkn] = findISINAndWKN(textArr, 4, 2);
     company = findCompany(textArr, type);
     date = findDateBuySell(textArr);
+    time = findOrderTime(textArr);
     shares = findShares(textArr);
     amount = +findAmount(textArr);
     price = +Big(amount).div(shares);
@@ -274,7 +299,7 @@ const parseData = textArr => {
   }
 
   // Comdirect doesn't provide a order time...
-  const [parsedDate, parsedDateTime] = createActivityDateTime(date, undefined);
+  const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
 
   let activity = {
     broker: 'comdirect',

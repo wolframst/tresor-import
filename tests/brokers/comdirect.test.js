@@ -101,7 +101,7 @@ describe('Broker: comdirect', () => {
         broker: 'comdirect',
         type: 'Buy',
         date: '2020-11-02',
-        datetime: '2020-11-02T' + activities[0].datetime.substring(11),
+        datetime: '2020-11-02T10:41:00.000Z',
         isin: 'DE0006464506',
         wkn: '646450',
         company: 'Leifheit AG',
@@ -121,7 +121,7 @@ describe('Broker: comdirect', () => {
         broker: 'comdirect',
         type: 'Buy',
         date: '2020-11-02',
-        datetime: '2020-11-02T' + activities[0].datetime.substring(11),
+        datetime: '2020-11-02T08:28:00.000Z',
         isin: 'CNE100000296',
         wkn: 'A0M4W9',
         company: 'BYD Co. Ltd.',
@@ -141,7 +141,7 @@ describe('Broker: comdirect', () => {
         broker: 'comdirect',
         type: 'Buy',
         date: '2020-10-29',
-        datetime: '2020-10-29T' + activities[0].datetime.substring(11),
+        datetime: '2020-10-29T14:34:00.000Z',
         isin: 'US54405Q1004',
         wkn: 'A2QGHG',
         company: 'Lordstown Motors Corp.',
@@ -163,7 +163,7 @@ describe('Broker: comdirect', () => {
         broker: 'comdirect',
         type: 'Buy',
         date: '2020-11-03',
-        datetime: '2020-11-03T' + activities[0].datetime.substring(11),
+        datetime: '2020-11-03T14:30:00.000Z',
         isin: 'US01609W1027',
         wkn: 'A117ME',
         company: 'Alibaba Group Holding Ltd.',
@@ -185,7 +185,7 @@ describe('Broker: comdirect', () => {
         broker: 'comdirect',
         type: 'Sell',
         date: '2020-03-18',
-        datetime: '2020-03-18T' + activities[0].datetime.substring(11),
+        datetime: '2020-03-18T09:08:00.000Z',
         isin: 'US09075V1026',
         wkn: 'A2PSR2',
         company: 'BioNTech SE',
@@ -197,6 +197,7 @@ describe('Broker: comdirect', () => {
       });
     });
   });
+
   describe('Validate dividends', () => {
     test('Can the dividend in USD parsed from the document', () => {
       const activities = comdirect.parsePages(dividendSamples[0]).activities;
