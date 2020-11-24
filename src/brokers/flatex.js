@@ -6,10 +6,10 @@ import {
   timeRegex,
 } from '@/helper';
 
-const getTableValueByKey = (textArr, startLineNumer, key) => {
+const getTableValueByKey = (textArr, startLineNumber, key) => {
   const finding = textArr.find(
     t =>
-      textArr.indexOf(t, startLineNumer - 1) > startLineNumer &&
+      textArr.indexOf(t, startLineNumber - 1) > startLineNumber &&
       t.match(new RegExp(key + '\\s*:\\s+'))
   );
   const result = finding
@@ -18,9 +18,9 @@ const getTableValueByKey = (textArr, startLineNumer, key) => {
   return result ? result[1] : null;
 };
 
-const getHeaderValueByKey = (textArr, startLineNumer, key) => {
+const getHeaderValueByKey = (textArr, startLineNumber, key) => {
   const result = textArr.find(
-    t => textArr.indexOf(t) >= startLineNumer && t.includes(key + ' ')
+    t => textArr.indexOf(t) >= startLineNumber && t.includes(key + ' ')
   );
   return result ? result.match(new RegExp(key + '\\s\\s+(.+)'))[1] : null;
 };
@@ -52,15 +52,15 @@ const findCompany = (textArr, tableIndex) => {
   return companyMatch ? companyMatch[3].trim() : null;
 };
 
-const findDateBuySell = (textArr, startLineNumer) =>
-  getTableValueByKey(textArr, startLineNumer, 'Schlusstag')
-    ? getTableValueByKey(textArr, startLineNumer, 'Schlusstag').split(', ')[0] // standard stock
+const findDateBuySell = (textArr, startLineNumber) =>
+  getTableValueByKey(textArr, startLineNumber, 'Schlusstag')
+    ? getTableValueByKey(textArr, startLineNumber, 'Schlusstag').split(', ')[0] // standard stock
     : getHeaderValueByKey(textArr, 0, 'Handelstag'); // etf
 
-const findOrderTime = (textArr, startLineNumer) => {
+const findOrderTime = (textArr, startLineNumber) => {
   const lineWithOrderTime = getTableValueByKey(
     textArr,
-    startLineNumer,
+    startLineNumber,
     'Schlusstag'
   );
 
@@ -84,51 +84,51 @@ const findOrderTime = (textArr, startLineNumer) => {
   return lineWithExecutionTime.split(' ')[0];
 };
 
-const findShares = (textArr, startLineNumer) =>
+const findShares = (textArr, startLineNumber) =>
   parseGermanNum(
-    getTableValueByKey(textArr, startLineNumer, 'Ordervolumen')
-      ? getTableValueByKey(textArr, startLineNumer, 'Ordervolumen').split(
+    getTableValueByKey(textArr, startLineNumber, 'Ordervolumen')
+      ? getTableValueByKey(textArr, startLineNumber, 'Ordervolumen').split(
           ' '
         )[0] // stock
-      : getTableValueByKey(textArr, startLineNumer, 'Ausgeführt')
-      ? getTableValueByKey(textArr, startLineNumer, 'Ausgeführt').split(' ')[0] // etf
-      : getTableValueByKey(textArr, startLineNumer, 'St.').split(' ')[0] // dividend
+      : getTableValueByKey(textArr, startLineNumber, 'Ausgeführt')
+      ? getTableValueByKey(textArr, startLineNumber, 'Ausgeführt').split(' ')[0] // etf
+      : getTableValueByKey(textArr, startLineNumber, 'St.').split(' ')[0] // dividend
   );
 
-const findPrice = (textArr, startLineNumer) =>
+const findPrice = (textArr, startLineNumber) =>
   parseGermanNum(
-    getTableValueByKey(textArr, startLineNumer, 'Kurs').split(' ')[0]
+    getTableValueByKey(textArr, startLineNumber, 'Kurs').split(' ')[0]
   );
 
-const findAmount = (textArr, startLineNumer) =>
+const findAmount = (textArr, startLineNumber) =>
   parseGermanNum(
-    getTableValueByKey(textArr, startLineNumer, 'Kurswert').split(' ')[0]
+    getTableValueByKey(textArr, startLineNumber, 'Kurswert').split(' ')[0]
   );
 
-const findFee = (textArr, startLineNumer) => {
-  const provision = getTableValueByKey(textArr, startLineNumer, 'Provision')
+const findFee = (textArr, startLineNumber) => {
+  const provision = getTableValueByKey(textArr, startLineNumber, 'Provision')
     ? parseGermanNum(
-        getTableValueByKey(textArr, startLineNumer, 'Provision').split(' ')[0]
+        getTableValueByKey(textArr, startLineNumber, 'Provision').split(' ')[0]
       )
     : 0;
   const ownExpenses = getTableValueByKey(
     textArr,
-    startLineNumer,
+    startLineNumber,
     'Eigene Spesen'
   )
     ? parseGermanNum(
-        getTableValueByKey(textArr, startLineNumer, 'Eigene Spesen').split(
+        getTableValueByKey(textArr, startLineNumber, 'Eigene Spesen').split(
           ' '
         )[0]
       )
     : 0;
   const foreignExpenses = getTableValueByKey(
     textArr,
-    startLineNumer,
+    startLineNumber,
     'Fremde Spesen'
   )
     ? parseGermanNum(
-        getTableValueByKey(textArr, startLineNumer, 'Fremde Spesen').split(
+        getTableValueByKey(textArr, startLineNumber, 'Fremde Spesen').split(
           ' '
         )[0]
       )
@@ -137,34 +137,34 @@ const findFee = (textArr, startLineNumer) => {
   return +Big(provision).plus(Big(ownExpenses)).plus(Big(foreignExpenses));
 };
 
-const findTax = (textArr, startLineNumer) =>
-  getTableValueByKey(textArr, startLineNumer, 'Einbeh. Steuer')
+const findTax = (textArr, startLineNumber) =>
+  getTableValueByKey(textArr, startLineNumber, 'Einbeh. Steuer')
     ? parseGermanNum(
-        getTableValueByKey(textArr, startLineNumer, 'Einbeh. Steuer').split(
+        getTableValueByKey(textArr, startLineNumber, 'Einbeh. Steuer').split(
           ' '
         )[0]
       )
-    : getTableValueByKey(textArr, startLineNumer, 'Einbeh. KESt')
+    : getTableValueByKey(textArr, startLineNumber, 'Einbeh. KESt')
     ? parseGermanNum(
-        getTableValueByKey(textArr, startLineNumer, 'Einbeh. KESt').split(
+        getTableValueByKey(textArr, startLineNumber, 'Einbeh. KESt').split(
           ' '
         )[0]
       )
     : 0;
 
-const findDividendTax = (textArr, startLineNumer) => {
+const findDividendTax = (textArr, startLineNumber) => {
   const assessmentBasis = getTableValueByKey(
     textArr,
-    startLineNumer,
+    startLineNumber,
     'grundlage'
   )
     ? parseGermanNum(
-        getTableValueByKey(textArr, startLineNumer, 'grundlage').split(' ')[0]
+        getTableValueByKey(textArr, startLineNumber, 'grundlage').split(' ')[0]
       )
     : 0; // Bemessungsgrundlage
-  const netDividend = getTableValueByKey(textArr, startLineNumer, 'Endbetrag')
+  const netDividend = getTableValueByKey(textArr, startLineNumber, 'Endbetrag')
     ? parseGermanNum(
-        getTableValueByKey(textArr, startLineNumer, 'Endbetrag').split(' ')[0]
+        getTableValueByKey(textArr, startLineNumber, 'Endbetrag').split(' ')[0]
       )
     : 0;
 
@@ -173,29 +173,29 @@ const findDividendTax = (textArr, startLineNumer) => {
     : 0;
 };
 
-const findDateDividend = (textArr, startLineNumer) =>
-  getTableValueByKey(textArr, startLineNumer, 'Valuta');
+const findDateDividend = (textArr, startLineNumber) =>
+  getTableValueByKey(textArr, startLineNumber, 'Valuta');
 
-const findPayout = (textArr, startLineNumer) => {
+const findPayout = (textArr, startLineNumber) => {
   const assessmentBasis = getTableValueByKey(
     textArr,
-    startLineNumer,
+    startLineNumber,
     'grundlage'
   )
     ? parseGermanNum(
-        getTableValueByKey(textArr, startLineNumer, 'grundlage').split(' ')[0]
+        getTableValueByKey(textArr, startLineNumber, 'grundlage').split(' ')[0]
       )
     : 0; // Bemessungsgrundlage
 
   if (assessmentBasis <= 0) {
     const payoutForeign = getTableValueByKey(
       textArr,
-      startLineNumer,
+      startLineNumber,
       'Bruttodividende'
     ).split(' ')[0];
     const conversionRate = getTableValueByKey(
       textArr,
-      startLineNumer,
+      startLineNumber,
       'Devisenkurs'
     ).split(' ')[0];
     return +Big(parseGermanNum(payoutForeign)).div(
@@ -219,44 +219,44 @@ export const canParsePage = (content, extension) =>
     content.some(line => line.includes('Dividendengutschrift')) ||
     content.some(line => line.includes('Ertragsmitteilung')));
 
-const parsePage = (textArr, startLineNumer) => {
+const parsePage = (textArr, startLineNumber) => {
   let type, date, time, isin, company, shares, price, amount, fee, tax;
 
-  if (lineContains(textArr, startLineNumer, 'Kauf')) {
+  if (lineContains(textArr, startLineNumber, 'Kauf')) {
     type = 'Buy';
-    isin = findISIN(textArr, startLineNumer);
-    company = findCompany(textArr, startLineNumer);
-    date = findDateBuySell(textArr, startLineNumer);
-    time = findOrderTime(textArr, startLineNumer);
-    shares = findShares(textArr, startLineNumer);
-    amount = findAmount(textArr, startLineNumer);
-    price = findPrice(textArr, startLineNumer);
-    fee = findFee(textArr, startLineNumer);
+    isin = findISIN(textArr, startLineNumber);
+    company = findCompany(textArr, startLineNumber);
+    date = findDateBuySell(textArr, startLineNumber);
+    time = findOrderTime(textArr, startLineNumber);
+    shares = findShares(textArr, startLineNumber);
+    amount = findAmount(textArr, startLineNumber);
+    price = findPrice(textArr, startLineNumber);
+    fee = findFee(textArr, startLineNumber);
     tax = 0;
-  } else if (lineContains(textArr, startLineNumer, 'Verkauf')) {
+  } else if (lineContains(textArr, startLineNumber, 'Verkauf')) {
     type = 'Sell';
-    isin = findISIN(textArr, startLineNumer);
-    company = findCompany(textArr, startLineNumer);
-    date = findDateBuySell(textArr, startLineNumer);
-    time = findOrderTime(textArr, startLineNumer);
-    shares = findShares(textArr, startLineNumer);
-    amount = findAmount(textArr, startLineNumer);
-    price = findPrice(textArr, startLineNumer);
-    fee = findFee(textArr, startLineNumer);
-    tax = findTax(textArr, startLineNumer);
+    isin = findISIN(textArr, startLineNumber);
+    company = findCompany(textArr, startLineNumber);
+    date = findDateBuySell(textArr, startLineNumber);
+    time = findOrderTime(textArr, startLineNumber);
+    shares = findShares(textArr, startLineNumber);
+    amount = findAmount(textArr, startLineNumber);
+    price = findPrice(textArr, startLineNumber);
+    fee = findFee(textArr, startLineNumber);
+    tax = findTax(textArr, startLineNumber);
   } else if (
-    lineContains(textArr, startLineNumer - 3, 'Dividendengutschrift') ||
-    lineContains(textArr, startLineNumer - 3, 'Ertragsmitteilung')
+    lineContains(textArr, startLineNumber - 3, 'Dividendengutschrift') ||
+    lineContains(textArr, startLineNumber - 3, 'Ertragsmitteilung')
   ) {
     type = 'Dividend';
-    isin = findISIN(textArr, startLineNumer);
-    company = findCompany(textArr, startLineNumer);
-    date = findDateDividend(textArr, startLineNumer);
-    shares = findShares(textArr, startLineNumer);
-    amount = findPayout(textArr, startLineNumer);
+    isin = findISIN(textArr, startLineNumber);
+    company = findCompany(textArr, startLineNumber);
+    date = findDateDividend(textArr, startLineNumber);
+    shares = findShares(textArr, startLineNumber);
+    amount = findPayout(textArr, startLineNumber);
     price = amount / shares;
     fee = 0;
-    tax = findDividendTax(textArr, startLineNumer);
+    tax = findDividendTax(textArr, startLineNumber);
   }
 
   const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
