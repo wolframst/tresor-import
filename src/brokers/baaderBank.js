@@ -22,8 +22,10 @@ const isBrokerGratisbroker = content =>
   content.some(line => line.includes('GRATISBROKER GmbH'));
 
 const isBrokerScalableCapital = content =>
-  content.some(line =>
-    line.includes('Scalable Capital Vermögensverwaltung GmbH')
+  content.some(
+    line =>
+      line.includes('Scalable Capital Vermögensverwaltung GmbH') ||
+      content.some(line => line.includes('Scalable Capital Vermögensverw.GmbH'))
   );
 
 const isBrokerOskar = content =>
@@ -109,10 +111,23 @@ const findLineNumberByCurrentAndPreviousLineContent = (
 
 const findISIN = content => findByStartingTerm(content, 'ISIN: ');
 
-const findCompany = (content, isDividend) =>
-  isDividend
-    ? content[findLineNumberByContent(content, 'p.STK') + 1]
-    : content[findLineNumberByContent(content, 'Auftragszeit:') + 5];
+const findCompany = (content, isDividend) => {
+  let startLineNumber = undefined;
+  let endLineNumber = undefined;
+  if (isDividend) {
+    startLineNumber = findLineNumberByContent(content, 'p.STK') + 1;
+    endLineNumber = findLineNumberByContent(content, 'Zahlungszeitraum:') - 1;
+  } else {
+    startLineNumber = findLineNumberByContent(content, 'Auftragszeit:') + 5;
+    endLineNumber = findLineNumberByContent(content, 'Orderroutingssystem') - 2;
+  }
+
+  if (startLineNumber + 1 <= endLineNumber) {
+    return content[startLineNumber] + ' ' + content[startLineNumber + 1];
+  }
+
+  return content[startLineNumber];
+};
 
 const findShares = (content, isDividend) => {
   const line = isDividend
