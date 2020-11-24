@@ -22,7 +22,12 @@ const findISIN = content =>
   content[findLineNumberByContent(content, 'ISIN') + 5];
 
 const findOrderDate = content => {
-  const value = content[findLineNumberByContent(content, 'Schlusstag') + 1];
+  const lineNumber = findLineNumberByContent(content, 'Schlusstag');
+  if (lineNumber <= 0) {
+    return undefined;
+  }
+
+  const value = content[lineNumber + 1];
   if (!value.includes(' ')) {
     return value;
   }
@@ -31,9 +36,12 @@ const findOrderDate = content => {
 };
 
 const findOrderTime = content => {
-  const lineValue =
-    content[findLineNumberByContent(content, 'Schlusstag/-Zeit') + 1];
+  const lineNumber = findLineNumberByContent(content, 'Schlusstag/-Zeit');
+  if (lineNumber <= 0) {
+    return undefined;
+  }
 
+  const lineValue = content[lineNumber + 1];
   if (!lineValue.includes(' ') || !lineValue.includes(':')) {
     return undefined;
   }
