@@ -3,6 +3,7 @@ import {
   parseGermanNum,
   validateActivity,
   createActivityDateTime,
+  timeRegex,
 } from '@/helper';
 
 const isPageTypeBuy = content =>
@@ -42,7 +43,7 @@ const findOrderTime = content => {
   }
 
   const lineValue = content[lineNumber + 1];
-  if (!lineValue.includes(' ') || !lineValue.includes(':')) {
+  if (!lineValue.includes(' ') || !timeRegex(true).test(lineValue)) {
     return undefined;
   }
 

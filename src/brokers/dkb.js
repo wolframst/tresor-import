@@ -3,6 +3,7 @@ import {
   parseGermanNum,
   validateActivity,
   createActivityDateTime,
+  timeRegex,
 } from '@/helper';
 
 const offsets = {
@@ -40,7 +41,7 @@ const findDateBuySell = textArr =>
 
 const findOrderTime = content => {
   const lineContent = getValueByPreviousElement(content, '-Zeit');
-  if (lineContent === '' || !lineContent.includes(':')) {
+  if (lineContent === '' || !timeRegex(true).test(lineContent)) {
     return undefined;
   }
 

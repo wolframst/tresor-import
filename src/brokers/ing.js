@@ -3,6 +3,7 @@ import {
   parseGermanNum,
   validateActivity,
   createActivityDateTime,
+  timeRegex,
 } from '@/helper';
 
 const getValueByPreviousElement = (textArr, prev, range) => {
@@ -55,7 +56,7 @@ const findDate = textArr =>
 const findOrderTime = content => {
   // Extract the time after the line with order time which contains "um 17:22:22 Uhr"
   const lineContent = getValueByPreviousElement(content, 'Ausführungstag', 3);
-  if (lineContent === undefined || !lineContent.includes(':')) {
+  if (lineContent === undefined || !timeRegex(true).test(lineContent)) {
     return undefined;
   }
 

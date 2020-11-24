@@ -3,6 +3,7 @@ import {
   parseGermanNum,
   validateActivity,
   createActivityDateTime,
+  timeRegex,
 } from '@/helper';
 
 const findISINAndWKN = (text, spanISIN, spanWKN) => {
@@ -44,7 +45,7 @@ const findOrderTime = content => {
   const lineNumber = content.findIndex(t => t.includes(searchTerm));
 
   // Some documents have the time on the same line as `Handelszeit`
-  if (lineNumber >= 0 && content[lineNumber].includes(':')) {
+  if (lineNumber >= 0 && timeRegex(false).test(content[lineNumber])) {
     return (
       content[lineNumber].split(':')[1].trim() +
       ':' +
@@ -53,7 +54,7 @@ const findOrderTime = content => {
   }
 
   // and some on two lines after `Handelszeit`
-  if (lineNumber >= 0 && content[lineNumber + 2].includes(':')) {
+  if (lineNumber >= 0 && timeRegex(false).test(content[lineNumber + 2])) {
     return content[lineNumber + 2].split(' ')[0];
   }
 

@@ -3,6 +3,7 @@ import {
   parseGermanNum,
   validateActivity,
   createActivityDateTime,
+  timeRegex,
 } from '@/helper';
 
 const getTableValueByKey = (textArr, startLineNumer, key) => {
@@ -62,7 +63,8 @@ const findOrderTime = (textArr, startLineNumer) => {
     startLineNumer,
     'Schlusstag'
   );
-  if (lineWithOrderTime !== null && lineWithOrderTime.includes(':')) {
+
+  if (lineWithOrderTime !== null && timeRegex(false).test(lineWithOrderTime)) {
     return lineWithOrderTime.split(' ')[1].trim();
   }
 
@@ -72,7 +74,10 @@ const findOrderTime = (textArr, startLineNumer) => {
     'Ausführungszeit'
   );
 
-  if (lineWithExecutionTime === null || !lineWithExecutionTime.includes(':')) {
+  if (
+    lineWithExecutionTime === null ||
+    !timeRegex(false).test(lineWithExecutionTime)
+  ) {
     return undefined;
   }
 

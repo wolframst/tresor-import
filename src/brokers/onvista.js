@@ -3,6 +3,7 @@ import {
   parseGermanNum,
   validateActivity,
   createActivityDateTime,
+  timeRegex,
 } from '@/helper';
 
 // Both smartbroker and onvista use highly similar parsers due to them both being
@@ -51,12 +52,12 @@ const findOrderTime = content => {
   }
 
   const lineContentFormatNew = content[lineNumber + 1].trim();
-  if (lineContentFormatNew.includes(':')) {
+  if (timeRegex(false).test(lineContentFormatNew)) {
     return lineContentFormatNew;
   }
 
   const lineContentFormatOld = content[lineNumber - 1].trim();
-  if (lineContentFormatOld.includes(':')) {
+  if (timeRegex(false).test(lineContentFormatOld)) {
     return lineContentFormatOld;
   }
 

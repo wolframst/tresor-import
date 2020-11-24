@@ -4,6 +4,7 @@ import {
   validateActivity,
   findFirstIsinIndexInArray,
   createActivityDateTime,
+  timeRegex,
 } from '@/helper';
 
 const findISIN = textArr => {
@@ -57,9 +58,13 @@ const findDateBuySell = content => {
 
 const findOrderTime = content => {
   // Extract the time after the line with order time which contains "15:57:49"
-  const lineContent = content[findBuySellLineNumber(content) + 4];
+  const lineNumber = findBuySellLineNumber(content);
+  if (lineNumber <= 0) {
+    return undefined;
+  }
 
-  if (lineContent === undefined || !lineContent.includes(':')) {
+  const lineContent = content[lineNumber + 4];
+  if (lineContent === undefined || !timeRegex(true).test(lineContent)) {
     return undefined;
   }
 

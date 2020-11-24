@@ -3,6 +3,7 @@ import {
   parseGermanNum,
   validateActivity,
   createActivityDateTime,
+  timeRegex,
 } from '@/helper';
 
 const isPageTypeBuy = content =>
@@ -51,7 +52,8 @@ const findOrderDate = content => {
 };
 
 const findOrderTime = content => {
-  // Extract the time after the line with order time which contains "06:24:26:12"
+  // Extract the time after the line with order time which contains "06:24:26:12". The
+  // time must match the format `HH:mm:ss`.
   let orderTime =
     content[
       findLineNumberByCurrentAndPreviousLineContent(
@@ -61,7 +63,7 @@ const findOrderTime = content => {
       ) + 4
     ];
 
-  if (orderTime !== undefined && orderTime.includes(':')) {
+  if (orderTime !== undefined && timeRegex(true).test(orderTime)) {
     // The document is a normal market order
     return orderTime.substring(0, 8);
   }
@@ -69,7 +71,7 @@ const findOrderTime = content => {
   // For a saving plan, the order date is on another location
   orderTime = content[findLineNumberByContent(content, 'Handelsuhrzeit') + 2];
 
-  if (orderTime !== undefined && orderTime.includes(':')) {
+  if (orderTime !== undefined && timeRegex(true).test(orderTime)) {
     // The document is a normal market order
     return orderTime.substring(0, 8);
   }
