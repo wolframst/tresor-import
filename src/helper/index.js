@@ -248,7 +248,7 @@ export function createActivityDateTime(
   zone = zone.trim();
 
   let dateTime;
-  if (time === undefined || !time.includes(':')) {
+  if (time === undefined || !/[0-2][0-9]:[0-9]{2}(:[0-9]{2}|)/.test(time)) {
     // Append the current local time when to the date that was given from the implementation. The date must match the
     // format in `dateFormat`.
     const currentTime = DateTime.fromObject({ zone: zone });
@@ -261,7 +261,7 @@ export function createActivityDateTime(
     });
   } else {
     // Convert the date and time from the implementation to a datetime value. The values of date and time must match
-    // the given format in `dateTimeFormat` concat with an space between. 
+    // the given format in `dateTimeFormat` concat with an space between.
     dateTime = DateTime.fromFormat(date + ' ' + time, dateTimeFormat, {
       zone: zone,
     });
