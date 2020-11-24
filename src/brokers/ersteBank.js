@@ -61,7 +61,7 @@ const findDateBuy = (pageArray, legacyDocument = false) => {
 const findOrderTime = content => {
   const lineNumber = content.findIndex(line => line.includes('hrungszeit'));
   if (lineNumber > 0) {
-    const elements = content[lineNumber].split(' ');
+    const elements = content[lineNumber].split(/\s+/);
     const elementIndex = elements.findIndex(element =>
       element.includes('hrungszeit')
     );
