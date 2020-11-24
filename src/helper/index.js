@@ -231,6 +231,9 @@ export function findFirstIsinIndexInArray(array) {
   return isinIndex === -1 ? undefined : isinIndex;
 }
 
+// This function will convert a date (reuqired) and a time (can be undefined) to a formatted date and datetime.
+// When no time is present, the current time will be used to ensure the right order of activities after an import
+// was processed.
 export function createActivityDateTime(
   date,
   time,
@@ -238,7 +241,6 @@ export function createActivityDateTime(
   dateTimeFormat = 'dd.MM.yyyy HH:mm',
   zone = 'Europe/Berlin'
 ) {
-  // Date/Time must match to the format, also with leading/trailing spaces!
   date = date.trim();
   if (time !== undefined) {
     time = time.trim();
@@ -247,7 +249,8 @@ export function createActivityDateTime(
 
   let dateTime;
   if (time === undefined || !time.includes(':')) {
-    // Apend the current local time when to time was given from the implementation.
+    // Append the current local time when to the date that was given from the implementation. The date must match the
+    // format in `dateFormat`.
     const currentTime = DateTime.fromObject({ zone: zone });
     time =
       String(currentTime.hour).padStart(2, '0') +
@@ -257,6 +260,8 @@ export function createActivityDateTime(
       zone: zone,
     });
   } else {
+    // Convert the date and time from the implementation to a datetime value. The values of date and time must match
+    // the given format in `dateTimeFormat` concat with an space between. 
     dateTime = DateTime.fromFormat(date + ' ' + time, dateTimeFormat, {
       zone: zone,
     });
