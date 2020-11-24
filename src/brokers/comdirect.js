@@ -299,7 +299,6 @@ const parseData = textArr => {
     tax = findTax(textArr, fxRate);
   }
 
-  // Comdirect doesn't provide a order time...
   const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
 
   let activity = {
