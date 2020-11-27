@@ -82,6 +82,8 @@ describe('Smartbroker broker test', () => {
         amount: 73.05,
         fee: 0,
         tax: 20.45,
+        foreignCurrency: 'USD',
+        fxRate: 1.1804,
       });
     });
 
@@ -95,10 +97,12 @@ describe('Smartbroker broker test', () => {
         isin: 'US7134481081',
         company: 'PepsiCo Inc. Registered Shares DL -,0166',
         shares: 9,
-        price: 0.8755555555555555,
-        amount: 7.88,
+        price: 1.0068453349316437,
+        amount: 9.061608014384793,
         fee: 0,
-        tax: 2.07,
+        tax: 2.0716080143847933,
+        foreignCurrency: 'USD',
+        fxRate: 1.1679,
       });
     });
 
@@ -112,10 +116,50 @@ describe('Smartbroker broker test', () => {
         isin: 'US5021751020',
         company: 'LTC Properties Inc. Registered Shares DL -,01',
         shares: 32,
-        price: 0.160625,
-        amount: 5.14,
+        price: 0.18468176338719228,
+        amount: 5.909816428390153,
         fee: 0,
-        tax: 1.34,
+        tax: 1.339816428390153,
+        foreignCurrency: 'USD',
+        fxRate: 1.1821,
+      });
+    });
+
+    test('Should parse the document correctly: 2020_pan_american_silver', () => {
+      const activities = smartbroker.parsePages(dividendSamples[3]).activities;
+
+      expect(activities[0]).toEqual({
+        broker: 'smartbroker',
+        type: 'Dividend',
+        date: '2020-11-27',
+        isin: 'CA6979001089',
+        company: 'Pan American Silver Corp. Registered Shares o.N.',
+        shares: 25,
+        price: 0.07358246262388712,
+        amount: 1.839561565597178,
+        fee: 0,
+        tax: 0.5295615655971779,
+        foreignCurrency: 'USD',
+        fxRate: 1.1906,
+      });
+    });
+
+    test('Should parse the document correctly: 2020_ishares_global_clean_energy', () => {
+      const activities = smartbroker.parsePages(dividendSamples[4]).activities;
+
+      expect(activities[0]).toEqual({
+        broker: 'smartbroker',
+        type: 'Dividend',
+        date: '2020-11-25',
+        isin: 'IE00B1XNHC34',
+        company: 'iShsII-Gl.Clean Energy U.ETF Registered Shares o.N.',
+        shares: 140,
+        price: 0.02942857142857143,
+        amount: 4.12,
+        fee: 0,
+        tax: 1.09,
+        foreignCurrency: 'USD',
+        fxRate: 1.19035,
       });
     });
   });
