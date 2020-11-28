@@ -11,8 +11,6 @@
   <link rel="stylesheet" href="css/normalize.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
   <link rel="stylesheet" href="css/main.css">
-  <!-- Place favicon.ico in the root directory -->
-
 </head>
 
 <body>
@@ -35,6 +33,21 @@
             </label>
           </div>
           <br>
+          <div>
+            <button v-if="!jsonInputActive" class="button is-info is-light" @click="jsonInputActive = !jsonInputActive">Dokument im JSON Format hinzufügen</button>
+            <div v-else>
+              <textarea class="textarea" v-model="jsonContent" placeholder="[[ ... ]]"></textarea>
+              <div class="field is-grouped" style="margin-top: 1rem;">
+                <p class="control is-expanded">
+                  <input class="input" type="text" v-model="jsonExtension">
+                </p>
+                <p class="control">
+                  <button class="button is-info is-light mt-5" @click="loadJson">Eingabe laden</button>
+                </p>
+              </div>
+            </div>
+          </div>
+          <br>
           <ul v-cloak v-show="activities.length > 0" class="list">
             <li class="list-item" v-for="(activity, i) in activities" :key="i">
               <div v-if="!activity.parserError">
@@ -45,7 +58,6 @@
                         <p v-if="activity.type">
                           <span class="tag is-success is-light"
                             :class="getTypeColor(activity.type)">{{activity.type}}</span>
-                          <!-- <span v-if="activity.holding" class="tag">{{holding(activity.holding).symbol}}</span> -->
                           <span class="tag is-light">{{activity.shares}}x</span>
                         </p>
                       </div>
@@ -104,7 +116,7 @@
 
   <script src="js/vendor/modernizr-3.8.0.min.js"></script>
   <script src="js/plugins.js"></script>
-  <script src="../dist/main.js"></script>
+  <script src="../bundle/tresor-demo.js"></script>
 </body>
 
 </html>

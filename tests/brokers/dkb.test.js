@@ -1,42 +1,36 @@
-import { parseData, canParseData } from '../../src/brokers/dkb';
+import { findImplementation } from '../../src';
+import * as dkb from '../../src/brokers/dkb';
 import { buySamples, sellSamples, dividendsSamples } from './__mocks__/dkb';
 
 describe('DKB broker', () => {
   let consoleErrorSpy;
 
-  test('should accept Buy, Sell, Div DKB PDFs only', () => {
-    expect(canParseData(['BIC BYLADEM1001', 'Dividendengutschrift'])).toEqual(
-      true
-    );
-  });
+  const allSamples = buySamples.concat(sellSamples).concat(dividendsSamples);
 
-  test('should not accept any PDFs', () => {
-    expect(canParseData(['42'])).toEqual(false);
-  });
+  describe('Check all documents', () => {
+    test('Can the document parsed with DKB', () => {
+      allSamples.forEach(samples => {
+        expect(samples.some(item => dkb.canParsePage(item, 'pdf'))).toEqual(
+          true
+        );
+      });
+    });
 
-  test('should validate the result', () => {
-    const invalidSample = buySamples[0].filter(item => item !== 'Stück 36');
-    const activity = parseData(invalidSample);
+    test('Can identify a implementation from the document as DKB', () => {
+      allSamples.forEach(samples => {
+        const implementations = findImplementation(samples, 'pdf');
 
-    expect(activity).toEqual(undefined);
-    expect(console.error).toHaveBeenLastCalledWith('Error while parsing PDF', {
-      amount: 4428,
-      broker: 'dkb',
-      company: 'Kurswert',
-      date: '2019-01-25',
-      fee: 10,
-      isin: null,
-      price: 123,
-      shares: NaN,
-      type: 'Buy',
+        expect(implementations.length).toEqual(1);
+        expect(implementations[0]).toEqual(dkb);
+      });
     });
   });
 
   describe('Buy', () => {
     test('should map pdf data of sample 1 correctly', () => {
-      const activity = parseData(buySamples[0]);
+      const result = dkb.parsePages(buySamples[0]);
 
-      expect(activity).toEqual({
+      expect(result.activities[0]).toEqual({
         broker: 'dkb',
         type: 'Buy',
         date: '2019-01-25',
@@ -46,13 +40,14 @@ describe('DKB broker', () => {
         price: 123,
         amount: 4428,
         fee: 10,
+        tax: 0,
       });
     });
 
     test('should map pdf data of sample 2 correctly', () => {
-      const activity = parseData(buySamples[1]);
+      const result = dkb.parsePages(buySamples[1]);
 
-      expect(activity).toEqual({
+      expect(result.activities[0]).toEqual({
         broker: 'dkb',
         type: 'Buy',
         date: '2016-10-10',
@@ -62,12 +57,14 @@ describe('DKB broker', () => {
         price: 177.85,
         amount: 177.85,
         fee: 10,
+        tax: 0,
       });
     });
-    test('should map pdf data of sample 3 correctly', () => {
-      const activity = parseData(buySamples[2]);
 
-      expect(activity).toEqual({
+    test('should map pdf data of sample 3 correctly', () => {
+      const result = dkb.parsePages(buySamples[2]);
+
+      expect(result.activities[0]).toEqual({
         broker: 'dkb',
         type: 'Buy',
         date: '2016-10-18',
@@ -77,15 +74,16 @@ describe('DKB broker', () => {
         price: 353.8346,
         amount: 262.5,
         fee: 1.5,
+        tax: 0,
       });
     });
   });
 
   describe('Sell', () => {
     test('should map pdf data of sample 1 correctly', () => {
-      const activity = parseData(sellSamples[0]);
+      const result = dkb.parsePages(sellSamples[0]);
 
-      expect(activity).toEqual({
+      expect(result.activities[0]).toEqual({
         broker: 'dkb',
         type: 'Sell',
         date: '2020-01-27',
@@ -95,45 +93,100 @@ describe('DKB broker', () => {
         price: 123,
         amount: 4428,
         fee: 10,
+        tax: 0,
+      });
+    });
+
+    test('Can parse invesco_msci_world buy action', () => {
+      const result = dkb.parsePages(sellSamples[1]);
+
+      expect(result.activities[0]).toEqual({
+        broker: 'dkb',
+        type: 'Sell',
+        date: '2020-09-10',
+        isin: 'IE00B60SX394',
+        company: 'I.M.-I.MSCI WORLD UETF',
+        shares: 92,
+        price: 58.887,
+        amount: 5417.6,
+        fee: 16.32,
+        tax: 0,
+      });
+    });
+
+    test('Can parse IE00B4L5Y983 regular buys', () => {
+      const result = dkb.parsePages(sellSamples[2]);
+
+      expect(result.activities[0]).toEqual({
+        broker: 'dkb',
+        type: 'Sell',
+        date: '2020-10-14',
+        isin: 'IE00B4L5Y983',
+        company: 'ISHSIII-CORE MSCI WORLD U.ETF',
+        shares: 60,
+        price: 57.104,
+        amount: 3426.24,
+        fee: 10.86,
+        tax: 0,
+      });
+    });
+
+    test('Can parse a redemption of ETF fragments', () => {
+      const result = dkb.parsePages(sellSamples[3]);
+
+      expect(result.activities[0]).toEqual({
+        broker: 'dkb',
+        type: 'Sell',
+        date: '2020-10-28',
+        isin: 'IE00B3RBWM25',
+        company: 'VANGUARD FTSE ALL-WORLD U.ETF',
+        shares: 0.3807,
+        price: 78.82,
+        amount: 30.01,
+        fee: 0,
+        tax: 0.37,
       });
     });
   });
 
   describe('Dividend', () => {
     test('should map pdf data of sample 1 correctly', () => {
-      const activity = parseData(dividendsSamples[0]);
+      const result = dkb.parsePages(dividendsSamples[0]);
 
-      expect(activity).toEqual({
+      expect(result.activities[0]).toEqual({
         broker: 'dkb',
         type: 'Dividend',
         date: '2020-02-13',
         isin: 'US0378331005',
         company: 'APPLE INC.',
         shares: 36,
-        price: 0.6019444444444445,
-        amount: 21.67,
+        price: 0.7080555555555555,
+        amount: 25.49,
         fee: 0,
+        tax: 3.82,
       });
     });
-    test('should map pdf data of sample 2 correctly', () => {
-      const activity = parseData(dividendsSamples[1]);
 
-      expect(activity).toEqual({
+    test('should map pdf data of sample 2 correctly', () => {
+      const result = dkb.parsePages(dividendsSamples[1]);
+
+      expect(result.activities[0]).toEqual({
         broker: 'dkb',
         type: 'Dividend',
         date: '2016-03-10',
         isin: 'US5949181045',
         company: 'MICROSOFT CORP.',
         shares: 5,
-        price: 0.27799999999999997,
-        amount: 1.39,
+        price: 0.32599999999999996,
+        amount: 1.63,
         fee: 0,
+        tax: 0.24,
       });
     });
     test('should map pdf data of sample 3 correctly', () => {
-      const activity = parseData(dividendsSamples[2]);
+      const result = dkb.parsePages(dividendsSamples[2]);
 
-      expect(activity).toEqual({
+      expect(result.activities[0]).toEqual({
         broker: 'dkb',
         type: 'Dividend',
         date: '2020-04-08',
@@ -143,6 +196,23 @@ describe('DKB broker', () => {
         price: 0.375,
         amount: 4.5,
         fee: 0,
+        tax: 0,
+      });
+    });
+    test('should map pdf data of sample 4 correctly', () => {
+      const result = dkb.parsePages(dividendsSamples[3]);
+
+      expect(result.activities[0]).toEqual({
+        broker: 'dkb',
+        type: 'Dividend',
+        date: '2020-04-08',
+        isin: 'IE00B3RBWM25',
+        company: 'VANGUARD FTSE ALL-WORLD U.ETF',
+        shares: 12,
+        price: 0.375,
+        amount: 4.5,
+        fee: 0,
+        tax: 0.83,
       });
     });
   });

@@ -1,13 +1,17 @@
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
-import every from 'lodash/every';
-import values from 'lodash/values';
 import Big from 'big.js';
 
 import { parseGermanNum } from '@/helper';
 
-const getValueByPreviousElement = (textArr, prev, range) =>
-  textArr[textArr.findIndex(t => t.includes(prev)) + range];
+const getValueByPreviousElement = (textArr, prev, range) => {
+  const lineNumber = textArr.findIndex(t => t.includes(prev));
+  if (lineNumber < 0) {
+    return undefined;
+  }
+
+  return textArr[lineNumber + range];
+};
 
 const isBuy = textArr =>
   textArr.some(t => t.includes('Wertpapierabrechnung')) &&
@@ -22,9 +26,10 @@ const isDividend = textArr =>
     t => t.includes('Dividendengutschrift') || t.includes('Ertragsgutschrift')
   );
 
-export const canParseData = textArr =>
-  textArr.some(t => t.includes('BIC: INGDDEFFXX')) &&
-  (isBuy(textArr) || isSell(textArr) || isDividend(textArr));
+export const canParsePage = (content, extension) =>
+  extension === 'pdf' &&
+  content.some(t => t.includes('BIC: INGDDEFFXX')) &&
+  (isBuy(content) || isSell(content) || isDividend(content));
 
 const findShares = textArr =>
   isBuy(textArr) || isSell(textArr)
@@ -46,14 +51,49 @@ const findDate = textArr =>
     ? getValueByPreviousElement(textArr, 'Ausführungstag', 2).split(' ')[0]
     : getValueByPreviousElement(textArr, 'Zahltag', 1);
 
-const findPrice = textArr =>
-  isBuy(textArr) || isSell(textArr)
-    ? parseGermanNum(getValueByPreviousElement(textArr, 'Kurs', 2))
-    : parseGermanNum(
-        getValueByPreviousElement(textArr, 'Zins-/Dividendensatz', 1).split(
-          ' '
-        )[0]
-      );
+const findPrice = content => {
+  if (isBuy(content) || isSell(content)) {
+    return parseGermanNum(getValueByPreviousElement(content, 'Kurs', 2));
+  }
+
+  let amountAndCurrency = getValueByPreviousElement(
+    content,
+    'Zins-/Dividendensatz',
+    1
+  );
+  if (amountAndCurrency === undefined) {
+    // Dividends of ETFs have the label `Ertragsausschüttung per Stück`
+    amountAndCurrency = getValueByPreviousElement(
+      content,
+      'Ertragsausschüttung per Stück',
+      1
+    );
+  }
+
+  amountAndCurrency = amountAndCurrency.split(' ');
+
+  const amount = parseGermanNum(amountAndCurrency[0]);
+  if (amountAndCurrency[1] === 'EUR') {
+    return amount;
+  }
+
+  return +Big(amount).div(findExchangeRate(content));
+};
+
+const findExchangeRate = content => {
+  // Find the value in the line after "Umg. z. Dev.-Kurs"
+  const value = getValueByPreviousElement(content, 'Umg. z. Dev.-Kurs', 1);
+  if (value === undefined) {
+    return 1;
+  }
+
+  const regexMatch = value.match(/\(([\d,]+)\)/);
+  if (!regexMatch) {
+    return 1;
+  }
+
+  return Big(parseGermanNum(regexMatch[1]));
+};
 
 const findAmount = textArr =>
   parseGermanNum(getValueByPreviousElement(textArr, 'Kurswert', 2));
@@ -65,13 +105,58 @@ const findFee = textArr => {
   return fee && /([0-9]*)/.test(fee) ? fee : 0;
 };
 
-const findPayout = textArr =>
-  parseGermanNum(
-    getValueByPreviousElement(textArr, 'Gesamtbetrag zu Ihren Gunsten', 2)
-  );
+const findTaxes = content => {
+  var totalTax = Big(0);
 
-export const parseData = textArr => {
-  let type, date, isin, company, shares, price, amount, fee;
+  for (let lineNumber = 0; lineNumber < content.length; lineNumber++) {
+    const line = content[lineNumber].toLowerCase();
+
+    if (line.includes('qust')) {
+      // Special case:
+      // The withholding tax is payed in origin currency but ING write the amount in EUR to the QuST line: `QuSt 15,00 % (EUR 0,41)`
+      // For withholding tax in EUR, we need to check the line with offset of 2.
+
+      // Match the amount for withholding tax in other currencies (e.g.: `0,41` from `QuSt 15,00 % (EUR 0,41)`)
+      const regexMatch = line.match(/.+?\(.+?([\d,]+)\)/);
+      if (regexMatch) {
+        totalTax = totalTax.plus(Big(parseGermanNum(regexMatch[1])));
+        continue;
+      }
+
+      totalTax = totalTax.plus(Big(parseGermanNum(content[lineNumber + 2])));
+      lineNumber += 2;
+      continue;
+    }
+
+    if (!line.includes('steuer ') && !line.includes('zuschlag ')) {
+      continue;
+    }
+
+    const offset = line.endsWith('%') ? 2 : 3;
+    const lineWithTaxAmount = content[lineNumber + offset];
+    if (!lineWithTaxAmount.includes(',')) {
+      lineNumber += offset;
+      continue;
+    }
+
+    totalTax = totalTax.plus(Big(parseGermanNum(content[lineNumber + offset])));
+  }
+
+  return +totalTax;
+};
+
+const findPayout = textArr => {
+  const bruttoIndex = textArr.indexOf('Brutto');
+  if (!(textArr[bruttoIndex + 1] === 'EUR')) {
+    const foreignPayout = parseGermanNum(textArr[bruttoIndex + 2]);
+    return Big(foreignPayout).div(findExchangeRate(textArr));
+  } else {
+    return Big(parseGermanNum(textArr[bruttoIndex + 2]));
+  }
+};
+
+const parseData = textArr => {
+  let type, date, isin, company, shares, price, amount, fee, tax;
 
   if (isBuy(textArr)) {
     type = 'Buy';
@@ -82,6 +167,7 @@ export const parseData = textArr => {
     amount = findAmount(textArr);
     price = findPrice(textArr);
     fee = findFee(textArr);
+    tax = 0;
   } else if (isSell(textArr)) {
     type = 'Sell';
     isin = findISIN(textArr);
@@ -91,21 +177,20 @@ export const parseData = textArr => {
     amount = findAmount(textArr);
     price = findPrice(textArr);
     fee = findFee(textArr);
+    tax = findTaxes(textArr);
   } else if (isDividend(textArr)) {
     type = 'Dividend';
     isin = findISIN(textArr);
     company = findCompany(textArr);
     date = findDate(textArr);
     shares = findShares(textArr);
-    amount = findPayout(textArr);
-    price = +Big(amount).div(shares);
+    amount = +findPayout(textArr);
+    price = findPrice(textArr);
     fee = 0;
-  } else {
-    console.error('Type could not be determined!');
-    return undefined;
+    tax = findTaxes(textArr);
   }
 
-  const activity = {
+  return {
     broker: 'ing',
     type,
     date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
@@ -115,20 +200,15 @@ export const parseData = textArr => {
     price,
     amount,
     fee,
+    tax,
   };
-
-  const valid = every(values(activity), a => !!a || a === 0);
-
-  if (!valid) {
-    console.error('Error while parsing PDF', activity);
-    return undefined;
-  } else {
-    return activity;
-  }
 };
 
 export const parsePages = contents => {
-  // parse first page has activity data
-  const activity = parseData(contents[0]);
-  return [activity];
+  const activities = [parseData(contents[0])];
+
+  return {
+    activities,
+    status: 0,
+  };
 };

@@ -1,28 +1,71 @@
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
-import every from 'lodash/every';
-import values from 'lodash/values';
 import Big from 'big.js';
 
-import { parseGermanNum } from '@/helper';
+import {
+  parseGermanNum,
+  validateActivity,
+  findFirstIsinIndexInArray,
+} from '@/helper';
 
-const findISIN = text => text[text.findIndex(t => t === 'ISIN') + 3];
+const findISIN = textArr => {
+  return textArr[findFirstIsinIndexInArray(textArr)];
+};
 
-const findCompany = text => text[text.findIndex(t => t === 'ISIN') + 1];
+const findWKN = textArr => {
+  // for older dividend files
+  const wknIndexOld = textArr.findIndex(line => line.includes('WKN: '));
+  if (wknIndexOld >= 0) {
+    return textArr[wknIndexOld].split(/\s+/)[3];
+  }
+  // for newer dividend files
+  const wknStringIndex = textArr.findIndex(line => line === 'WKN');
+  if (wknStringIndex >= 0) {
+    const wknIndexOffset = findFirstIsinIndexInArray(
+      textArr.slice(wknStringIndex)
+    );
+    return textArr[wknStringIndex + wknIndexOffset - 1];
+  }
+  return undefined;
+};
+
+const findCompany = textArr => {
+  let indexIsinWkn = textArr.findIndex(line => line === 'ISIN');
+  // For older documents there is only a wkn
+  if (indexIsinWkn < 0) {
+    indexIsinWkn = textArr.findIndex(line => line.includes('WKN: '));
+  }
+  const name_index_one = textArr[indexIsinWkn + 1];
+  // Sometimes a company name is split in two during JSONifying. Only
+  // happens in newer documents that have an isin
+  if (findFirstIsinIndexInArray(textArr.slice(indexIsinWkn)) > 3) {
+    return name_index_one.concat(' ', textArr[indexIsinWkn + 2]);
+  }
+  return name_index_one;
+};
 
 const findDateBuySell = textArr => {
-  const idx = textArr.findIndex(t => t.toLowerCase() === 'orderabrechnung');
-  const date = textArr[idx + 2].substr(3, 10).trim();
-
-  return date;
+  // Before 12/2015 the headline is 'Wertpapierabrechnung'
+  const idx = textArr.findIndex(
+    t =>
+      t.toLowerCase() === 'orderabrechnung' ||
+      t.toLowerCase() === 'wertpapierabrechnung'
+  );
+  return textArr[idx + 2].substr(3, 10).trim();
 };
 
 const findDateDividend = textArr => {
-  const keyword = 'schlusstag';
+  const keyword = 'valuta';
   const dateLine = textArr.find(t => t.toLowerCase().includes(keyword));
-  const date = dateLine.substr(keyword.length).trim();
+  if (dateLine !== undefined) {
+    return dateLine.substr(keyword.length).trim();
+  }
 
-  return date;
+  const keywordOld = 'EX-TAG';
+  const dateLineOld = textArr.find(t => t.includes(keywordOld));
+  if (dateLineOld !== undefined) {
+    return dateLineOld.substr(keywordOld.length).trim();
+  }
 };
 
 const findShares = textArr => {
@@ -33,26 +76,48 @@ const findShares = textArr => {
 };
 
 const findDividendShares = textArr => {
-  const idx = textArr.findIndex(t => t.toLowerCase() === 'bestand');
-  const sharesLine = textArr[idx + 1];
-  const shares = sharesLine.split(' ')[0];
-
-  return parseGermanNum(shares);
+  const idx = textArr.findIndex(line => line.toLowerCase() === 'bestand');
+  // For newer files:
+  if (idx >= 0) {
+    return parseGermanNum(textArr[idx + 1].split(' ')[0]);
+  }
+  // For older files:
+  else {
+    const idxOld = textArr.findIndex(line => line === 'DIVIDENDENGUTSCHRIFT');
+    if (idxOld >= 0) {
+      return parseGermanNum(textArr[idxOld + 1].split(/\s+/)[1]);
+    }
+  }
 };
 
-const findAmount = textArr => {
-  const idx = textArr.findIndex(t => t.toLowerCase() === 'kurswert');
-  const amount = textArr[idx + 2];
+const findAmount = (textArr, type) => {
+  let amount, idx;
 
-  return parseGermanNum(amount);
-};
-
-const findPayout = textArr => {
-  const idx = textArr.findIndex(t =>
-    ['brutto in eur', 'brutto'].includes(t.toLowerCase())
-  );
-  const amount = textArr[idx + 1].split(' ')[0];
-
+  if (type === 'Buy' || type === 'Sell') {
+    idx = textArr.indexOf('Kurswert');
+    // Documents before 12/2015 have an empty line after 'Kurswert'
+    const hasEmptyLineAfterAmountLabel = textArr[idx + 1] === '';
+    amount = hasEmptyLineAfterAmountLabel ? textArr[idx + 3] : textArr[idx + 2];
+  } else if (type === 'Dividend') {
+    const oldDividendFile = textArr.some(
+      line => line.includes('IBAN') && line !== 'IBAN'
+    );
+    if (!oldDividendFile) {
+      // "Brutto in EUR" is only present if the dividend is paid in a foreign currency, otherwise its just "Brutto"
+      idx = textArr.indexOf('Brutto in EUR');
+      if (idx < 0) {
+        idx = textArr.indexOf('Brutto');
+      }
+      if (idx >= 0) {
+        amount = textArr[idx + 1].split(' ')[0];
+      }
+    } else {
+      idx = textArr.findIndex(line => line.includes('BRUTTO'));
+      if (idx >= 0) {
+        amount = textArr[idx].split(/\s+/)[2];
+      }
+    }
+  }
   return parseGermanNum(amount);
 };
 
@@ -80,43 +145,52 @@ const findTax = textArr => {
   return Math.abs(sum);
 };
 
-const findDividendTax = textArr => {
-  const sum = textArr.reduce((acc, t, i) => {
-    // is addition (Zuschlag)
-    const isAddition = t.toLowerCase().includes('zuschlag');
+const findDividendTax = (textArr, amount) => {
+  // For older dividend files:
+  const netAmountIndex = textArr.findIndex(line => line.includes('WERT'));
+  if (netAmountIndex >= 0) {
+    const netAmount = parseGermanNum(textArr[netAmountIndex].split(/\s+/)[3]);
+    return +Big(amount).minus(netAmount);
+  }
 
-    // is withholding tax (Quellensteuer)
-    const isWithholdingTax = t.toLowerCase().includes('quellensteuer');
+  // For newer dividend files
+  const netAmountIndexNew = textArr.findIndex(
+    line => line === 'Netto zugunsten' || line === 'Netto zulasten'
+  );
+  if (netAmountIndexNew >= 0) {
+    const netAmount = parseGermanNum(
+      textArr[netAmountIndexNew + 4].split(/\s+/)[0]
+    );
+    return +Big(amount).minus(netAmount);
+  }
+};
 
-    // is tax, excl. irrelevant withholding tax lines
-    const isTax =
-      t.toLowerCase().includes('steuer') &&
-      !t.toLowerCase().includes('anrechenbare quellensteuer') &&
-      !t.toLowerCase().includes('abzgl. quellensteuer');
-
-    if (isTax || isAddition) {
-      const offset = isWithholdingTax ? 1 : 3;
-      const [amount, currency] = textArr[i + offset].split(' ');
-
-      // ignore all USD taxes
-      if (currency !== 'USD') {
-        return acc.plus(Big(parseGermanNum(amount)));
-      }
-    }
-
-    return acc;
-  }, Big(0));
-
-  return Math.abs(+sum);
+const findForeignInformation = textArr => {
+  const foreignInfo = textArr.findIndex(line => line.includes('Devisenkurs'));
+  if (foreignInfo >= 0) {
+    const foreignInfoLine = textArr[foreignInfo + 1].split(/\s+/);
+    return [parseGermanNum(foreignInfoLine[0]), foreignInfoLine[1]];
+  }
+  return [undefined, undefined];
 };
 
 const isBuy = textArr => {
-  const idx = textArr.findIndex(t => t.toLowerCase() === 'orderabrechnung');
+  // Before 12/2015 the headline is 'Wertpapierabrechnung'
+  const idx = textArr.findIndex(
+    t =>
+      t.toLowerCase() === 'orderabrechnung' ||
+      t.toLowerCase() === 'wertpapierabrechnung'
+  );
   return idx >= 0 && textArr[idx + 1].toLowerCase() === 'kauf';
 };
 
 const isSell = textArr => {
-  const idx = textArr.findIndex(t => t.toLowerCase() === 'orderabrechnung');
+  // Before 12/2015 the headline is 'Wertpapierabrechnung'
+  const idx = textArr.findIndex(
+    t =>
+      t.toLowerCase() === 'orderabrechnung' ||
+      t.toLowerCase() === 'wertpapierabrechnung'
+  );
   return idx >= 0 && textArr[idx + 1].toLowerCase() === 'verkauf';
 };
 
@@ -125,83 +199,82 @@ const isDividend = textArr =>
     ['ertragsgutschrift', 'dividendengutschrift'].includes(t.toLowerCase())
   );
 
-export const canParseData = textArr => {
-  const isConsors = textArr.some(
-    t => t.toLowerCase && t.toLowerCase().includes('consorsbank')
+export const canParsePage = (content, extension) => {
+  if (extension !== 'pdf') {
+    return false;
+  }
+
+  const isConsors = content.some(
+    line => line.toLowerCase && line.toLowerCase().includes('consorsbank')
   );
 
   if (!isConsors) {
     return false;
   }
 
-  const isSupportedType =
-    isBuy(textArr) || isSell(textArr) || isDividend(textArr);
-
-  const isOldFormat = textArr.some(t => t.includes('IBAN') && t !== 'IBAN');
-
-  return isSupportedType && !isOldFormat;
+  return isBuy(content) || isSell(content) || isDividend(content);
 };
 
-export const parseData = textArr => {
-  let type, date, isin, company, shares, price, amount, fee, tax;
+const parseData = textArr => {
+  let type, date, shares, amount, fee, tax, fxRate, foreignCurrency;
 
+  const isin = findISIN(textArr);
+  const company = findCompany(textArr);
+  const wkn = findWKN(textArr);
   if (isBuy(textArr)) {
     type = 'Buy';
-    isin = findISIN(textArr);
-    company = findCompany(textArr);
     date = findDateBuySell(textArr);
     shares = findShares(textArr);
-    amount = findAmount(textArr);
-    price = +Big(amount).div(Big(shares));
+    amount = findAmount(textArr, 'Buy');
     fee = findFee(textArr);
     tax = 0;
   } else if (isSell(textArr)) {
     type = 'Sell';
-    isin = findISIN(textArr);
-    company = findCompany(textArr);
     date = findDateBuySell(textArr);
     shares = findShares(textArr);
-    amount = findAmount(textArr);
-    price = +Big(amount).div(Big(shares));
+    amount = findAmount(textArr, 'Sell');
     fee = findFee(textArr);
     tax = findTax(textArr);
   } else if (isDividend(textArr)) {
     type = 'Dividend';
-    isin = findISIN(textArr);
-    company = findCompany(textArr);
     date = findDateDividend(textArr);
     shares = findDividendShares(textArr);
-    amount = findPayout(textArr);
-    price = +Big(amount).div(Big(shares));
+    amount = findAmount(textArr, 'Dividend');
     fee = 0;
-    tax = findDividendTax(textArr);
+    tax = findDividendTax(textArr, amount);
+    [fxRate, foreignCurrency] = findForeignInformation(textArr);
   }
-
-  const activity = {
+  let activity = {
     broker: 'consorsbank',
     type,
     date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
-    isin,
     company,
     shares,
-    price,
+    price: +Big(amount).div(Big(shares)),
     amount,
     fee,
     tax,
   };
-
-  const valid = every(values(activity), a => !!a || a === 0);
-
-  if (!valid) {
-    console.error('Error while parsing PDF', activity);
-    return undefined;
-  } else {
-    return activity;
+  if (wkn !== undefined) {
+    activity.wkn = wkn;
   }
+  if (isin !== undefined) {
+    activity.isin = isin;
+  }
+  if (fxRate !== undefined) {
+    activity.fxRate = fxRate;
+  }
+  if (foreignCurrency !== undefined) {
+    activity.foreignCurrency = foreignCurrency;
+  }
+  return validateActivity(activity);
 };
 
 export const parsePages = contents => {
-  // only first page has activity data
-  const activity = parseData(contents[0]);
-  return [activity];
+  const activities = [parseData(contents[0])];
+
+  return {
+    activities,
+    status: 0,
+  };
 };

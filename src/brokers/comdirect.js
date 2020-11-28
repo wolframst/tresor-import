@@ -1,150 +1,315 @@
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
-import every from 'lodash/every';
-import values from 'lodash/values';
 import Big from 'big.js';
+import { onvistaIdentificationString } from './onvista';
 
-import { parseGermanNum } from '@/helper';
+import { parseGermanNum, validateActivity } from '@/helper';
 
-const findISIN = (text, span) => {
-  const isinLine = text[text.findIndex(t => t.includes('/ISIN')) + span];
-  const isin = isinLine.substr(isinLine.length - 12);
-  return isin;
+const findISINAndWKN = (text, spanISIN, spanWKN) => {
+  // The line contains either WPKNR/ISIN or WKN/ISIN, depending on the document
+  const isinIndex = text.findIndex(t => t.includes('/ISIN'));
+  const isinLine = text[isinIndex + spanISIN].split(/\s+/);
+  const wknLine = text[isinIndex + spanWKN].split(/\s+/);
+  return [isinLine[isinLine.length - 1], wknLine[wknLine.length - 1]];
 };
 
-const findCompany = (text, span) => {
-  const companyLine = text[text.findIndex(t => t.includes('/ISIN')) + span];
+const findCompany = (text, type) => {
+  const companyLineIndex = text.findIndex(t => t.includes('/ISIN'));
   // span = 2 means its a dividend PDF - dividends dont have the WKN in the same line
-  const company =
-    span === 2
-      ? companyLine.trim()
-      : companyLine.substr(0, companyLine.length - 6).trim();
-
-  return company;
+  if (type === 'Buy') {
+    return text[companyLineIndex + 1].split(/\s+/).slice(0, -1).join(' ');
+  } else if (type === 'Sell') {
+    return text[companyLineIndex + 1].trim();
+  } else if (type === 'Dividend') {
+    return text[companyLineIndex + 2].trim();
+  }
 };
 
 const findDateBuySell = textArr => {
   const dateLine = textArr[textArr.findIndex(t => t.includes('Geschäftstag'))];
-  const date = dateLine.split(':')[1].trim().substr(0, 10);
-  return date;
+  return format(
+    parse(
+      dateLine.match(/[0-9]{2}.[0-9]{2}.[1-2][0-9]{3}/)[0],
+      'dd.MM.yyyy',
+      new Date()
+    ),
+    'yyyy-MM-dd'
+  );
 };
 
 const findDateDividend = textArr => {
-  const dateLine = textArr[textArr.findIndex(t => t.includes('zahlbar ab'))];
-  const datePart = dateLine.split('zahlbar ab')[1].trim().substr(0, 10);
-  const date = datePart;
-
-  return date;
+  const dateLine = textArr[
+    textArr.findIndex(t => t.includes('Valuta')) + 1
+  ].split(/\s+/);
+  const date = dateLine[dateLine.length - 3];
+  return format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd');
 };
 
 const findShares = textArr => {
+  // for sells that are split into multiple sellorders, we want to get all
+  // sell shares at once
+
+  const splitSellAmountIndex = textArr.indexOf('(ggf. gerundet)');
+  if (splitSellAmountIndex >= 0) {
+    const splitSellLine = textArr[splitSellAmountIndex - 3].split(/\s+/);
+    return parseGermanNum(splitSellLine[splitSellLine.length - 1]);
+  }
+
+  // Otherwise just search for the first occurance of 'St.'
   const sharesLine =
     textArr[textArr.findIndex(t => t.includes('Nennwert')) + 1];
-  const shares = sharesLine.split('  ')[1];
-  return parseGermanNum(shares);
+  let shares = 0;
+  let hasPiece = false;
+  sharesLine.split(/\s+/).forEach(element => {
+    if (shares > 0) {
+      return;
+    }
+    if (element.includes('St.')) {
+      hasPiece = true;
+      return;
+    }
+    if (!hasPiece || element.length === 0) {
+      return;
+    }
+    shares = parseGermanNum(element);
+  });
+
+  return shares;
 };
 
 const findDividendShares = textArr => {
   const sharesLine = textArr[textArr.findIndex(t => t.includes('STK'))];
-  const shares = sharesLine.split('  ').filter(i => i.length > 0)[1];
-  // console.log(shares)
+  const shares = sharesLine.split(/\s+/).filter(i => i.length > 0)[1];
   return parseGermanNum(shares);
 };
 
-const findAmount = textArr => {
-  const priceArea = textArr.slice(
-    textArr.findIndex(t => t.includes('Kurswert'))
+const findAmount = (textArr, fxRate, foreignCurrency) => {
+  let isInForeignCurrency = false;
+  let amount = 0;
+  // SELL ONLY:
+  // Sometimes sell orders are split across multiple sells. This needs to be
+  // handled differently. There are no tests for split sells in foreign currencies
+  // at the moment so issues might arise here
+  const splitSellAmountIndex = textArr.indexOf('(ggf. gerundet)');
+
+  // Logic for normal Buy, Sell, and Dividend Operations:
+  const amountIndex = textArr.findIndex(t => t.includes('Kurswert'));
+
+  if (splitSellAmountIndex > 0) {
+    amount = Big(parseGermanNum(textArr[splitSellAmountIndex - 1]));
+  } else if (amountIndex > 0) {
+    const amountLine = textArr[amountIndex].split(/\s+/);
+    amount = Big(parseGermanNum(amountLine[amountLine.length - 1]));
+    if (amountLine[amountLine.length - 2] === foreignCurrency) {
+      isInForeignCurrency = true;
+    }
+    // BUY ONLY:
+    // If there is a currency-rate within the price line a foreign
+    // reduction has not yet been factored in
+    if (amountLine.includes('Devisenkurs')) {
+      return amount.plus(
+        findPurchaseReduction(textArr, fxRate, foreignCurrency)
+      );
+    }
+  }
+  return isInForeignCurrency ? amount.div(fxRate) : amount;
+};
+
+const findPayout = (textArr, fxRate) => {
+  const amountLine =
+    textArr[textArr.findIndex(t => t.includes('Bruttobetrag'))];
+  const amountPart = amountLine.split(/\s+/);
+  const amount = parseGermanNum(amountPart[2]);
+  if (fxRate !== undefined) {
+    return +Big(amount).div(fxRate);
+  }
+  return amount;
+};
+
+const findFee = (textArr, amount, isSell = false) => {
+  const span = isSell ? 8 : 1;
+  const preTaxLine = textArr[
+    textArr.findIndex(t => t.includes('vor Steuern')) + span
+  ].split(/\s+/);
+  const preTaxAmount = parseGermanNum(preTaxLine[preTaxLine.length - 1]);
+  return isSell
+    ? Big(amount).minus(preTaxAmount)
+    : Big(preTaxAmount).minus(amount);
+};
+
+const findTax = (textArr, fxRate) => {
+  let payoutTax = Big(0);
+  const withholdingTaxIndex = textArr.findIndex(line =>
+    line.includes('Quellensteuer')
   );
-  const priceLine = priceArea[priceArea.findIndex(t => t.includes('EUR'))];
-  const amount = priceLine.split('EUR')[1].trim();
-  return parseGermanNum(amount);
+  if (withholdingTaxIndex > 0) {
+    const withholdingTax = parseGermanNum(
+      textArr[withholdingTaxIndex].split(/\s+/)[4]
+    );
+    if (fxRate !== undefined && fxRate > 0) {
+      payoutTax = payoutTax.plus(withholdingTax).div(fxRate);
+    } else {
+      payoutTax = payoutTax.plus(withholdingTax);
+    }
+  }
+
+  // Relevant for Sell Operations
+  const payedTaxIndex = textArr.indexOf('abgeführte Steuern');
+  if (payedTaxIndex >= 0) {
+    payoutTax = payoutTax.plus(
+      Big(parseGermanNum(textArr[payedTaxIndex + 2])).abs()
+    );
+  }
+
+  return +payoutTax;
 };
 
-const findPayout = textArr => {
-  const amountLine = textArr[textArr.findIndex(t => t.includes('Gunsten')) + 1];
-  const amountPart = amountLine.split('EUR');
-  const amount = amountPart[amountPart.length - 1].trim();
-  // console.log('payout', amount)
-  return parseGermanNum(amount);
+const findPurchaseReduction = (textArr, fxRate, foreignCurrency) => {
+  const reduction = Big(0);
+  const reductionIndex = textArr.findIndex(t =>
+    t.includes('Reduktion Kaufaufschlag')
+  );
+  if (reductionIndex < 0) {
+    return +reduction;
+  }
+  let rate = 1;
+  const reductionLine = textArr[reductionIndex].split(/\s+/);
+  let reductionValue = reductionLine[reductionLine.length - 1];
+  if (reductionValue.endsWith('-')) {
+    reductionValue = Big(parseGermanNum(reductionValue.slice(0, -1))).abs();
+  }
+  // Sometimes the reduction is in euro. If not the fxRate will be applied
+  if (reductionLine.includes(foreignCurrency)) {
+    return Big(reductionValue).div(rate);
+  }
+  return Big(reductionValue);
 };
 
-const findFee = textArr => {
-  const amount = findAmount(textArr);
-  const totalCostLine =
-    textArr[textArr.findIndex(t => t.includes('Zu Ihren')) + 1];
-  const totalCost = totalCostLine.split('EUR').pop().trim();
+const findPayoutFxrateForeignCurrency = textArr => {
+  const foreignIndex = textArr.findIndex(line =>
+    line.includes('zum Devisenkurs:')
+  );
+  if (foreignIndex > 0) {
+    const foreignLine = textArr[foreignIndex].split(/\s+/);
+    const fxRate = parseGermanNum(foreignLine[3]);
+    const foreignCurrency = foreignLine[2].split('/')[1];
+    return [fxRate, foreignCurrency];
+  }
+  return [undefined, undefined];
+};
 
-  const diff = +Big(parseGermanNum(totalCost)).minus(Big(amount));
-  return Math.abs(diff);
+const findBuyFxRateForeignCurrency = textArr => {
+  const foreignIndexV1 = textArr.findIndex(line =>
+    line.includes('Umrechnung zum Devisenkurs ')
+  );
+  const foreignIndexV2 = textArr.findIndex(line =>
+    line.includes('Umrechn. zum Dev. kurs ')
+  );
+  let fxRate = undefined;
+  let foreignCurrency = undefined;
+  if (foreignIndexV1 > 0) {
+    fxRate = parseGermanNum(textArr[foreignIndexV1].split(/\s+/)[3]);
+    foreignCurrency = textArr[foreignIndexV1 - 3].split(/\s+/)[2];
+  } else if (foreignIndexV2 > 0) {
+    fxRate = parseGermanNum(textArr[foreignIndexV2].split(/\s+/)[4]);
+    foreignCurrency = textArr[foreignIndexV2 - 3].split(/\s+/)[2];
+  }
+  return [fxRate, foreignCurrency];
 };
 
 const isBuy = textArr => textArr.some(t => t.includes('Wertpapierkauf'));
+
 const isSell = textArr => textArr.some(t => t.includes('Wertpapierverkauf'));
 
 const isDividend = textArr =>
   textArr.some(t => t.includes('Ertragsgutschrift')) ||
   textArr.some(t => t.includes('Dividendengutschrift'));
 
-export const canParseData = textArr =>
-  textArr.some(t => t.includes('comdirect bank')) &&
-  (isBuy(textArr) || isSell(textArr) || isDividend(textArr));
+export const canParsePage = (content, extension) =>
+  // The defining string used to be 'comdirect bank'. However, this string is
+  // not present in every document; 'comdirect' is.
+  extension === 'pdf' &&
+  content.some(line => line.includes('comdirect')) &&
+  content.every(line => !line.includes(onvistaIdentificationString)) &&
+  (isBuy(content) || isSell(content) || isDividend(content));
 
-export const parseData = textArr => {
-  let type, date, isin, company, shares, price, amount, fee;
-
-  if (isBuy(textArr)) {
-    type = 'Buy';
-    isin = findISIN(textArr, 2);
-    company = findCompany(textArr, 1);
-    date = findDateBuySell(textArr);
-    shares = findShares(textArr);
-    amount = findAmount(textArr);
-    price = +Big(amount).div(Big(shares));
-    fee = findFee(textArr);
-  } else if (isSell(textArr)) {
-    type = 'Sell';
-    isin = findISIN(textArr, 2);
-    company = findCompany(textArr, 1);
-    date = findDateBuySell(textArr);
-    shares = findShares(textArr);
-    amount = findAmount(textArr);
-    price = +Big(amount).div(Big(shares));
-    fee = findFee(textArr);
-  } else if (isDividend(textArr)) {
-    type = 'Dividend';
-    isin = findISIN(textArr, 3);
-    company = findCompany(textArr, 2);
-    date = findDateDividend(textArr);
-    shares = findDividendShares(textArr);
-    amount = findPayout(textArr);
-    price = +Big(amount).div(Big(shares));
-    fee = 0;
-  }
-
-  const activity = {
-    broker: 'comdirect',
-    type,
-    date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
+const parseData = textArr => {
+  let type,
+    date,
     isin,
+    wkn,
     company,
     shares,
     price,
     amount,
     fee,
-  };
+    tax,
+    fxRate,
+    foreignCurrency;
 
-  const valid = every(values(activity), a => !!a || a === 0);
-
-  if (!valid) {
-    console.error('Error while parsing PDF', activity);
-    return undefined;
-  } else {
-    return activity;
+  if (isBuy(textArr)) {
+    type = 'Buy';
+    date = findDateBuySell(textArr);
+    [fxRate, foreignCurrency] = findBuyFxRateForeignCurrency(textArr);
+    [isin, wkn] = findISINAndWKN(textArr, 2, 1);
+    company = findCompany(textArr, type);
+    amount = +findAmount(textArr, fxRate, foreignCurrency);
+    shares = findShares(textArr);
+    price = +Big(amount).div(shares);
+    fee = +findFee(textArr, amount);
+    tax = 0;
+  } else if (isSell(textArr)) {
+    type = 'Sell';
+    [isin, wkn] = findISINAndWKN(textArr, 4, 2);
+    company = findCompany(textArr, type);
+    date = findDateBuySell(textArr);
+    shares = findShares(textArr);
+    amount = +findAmount(textArr);
+    price = +Big(amount).div(shares);
+    fee = +findFee(textArr, amount, true);
+    tax = findTax(textArr);
+  } else if (isDividend(textArr)) {
+    [fxRate, foreignCurrency] = findPayoutFxrateForeignCurrency(textArr);
+    type = 'Dividend';
+    [isin, wkn] = findISINAndWKN(textArr, 3, 1);
+    company = findCompany(textArr, type);
+    date = findDateDividend(textArr);
+    shares = findDividendShares(textArr);
+    amount = findPayout(textArr, fxRate);
+    price = +Big(amount).div(shares);
+    fee = 0;
+    tax = findTax(textArr, fxRate);
   }
+  let activity = {
+    broker: 'comdirect',
+    type,
+    date,
+    isin,
+    wkn,
+    company,
+    shares,
+    price,
+    amount,
+    fee,
+    tax,
+  };
+  if (fxRate !== undefined) {
+    activity.fxRate = fxRate;
+  }
+  if (foreignCurrency !== undefined) {
+    activity.foreignCurrency = foreignCurrency;
+  }
+
+  return validateActivity(activity);
 };
 
 export const parsePages = contents => {
-  // only first page has activity data
-  const activity = parseData(contents[0]);
-  return [activity];
+  // Sometimes information regarding the first transcation (i. e. tax in sell
+  // documents) is spread across multiple pdf pages
+  const activities = [parseData(contents.flat())];
+
+  return {
+    activities,
+    status: 0,
+  };
 };

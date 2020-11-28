@@ -1,87 +1,20 @@
 import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import parse from 'date-fns/parse';
 import { de } from 'date-fns/locale';
-
-import { extractActivities, extractCSVActivities } from '../../src';
-
-const parsePDF = async (e, file) => {
-  const activities = await extractActivities(e);
-
-  if (activities.length === 0) {
-    return {
-      filename: file.name,
-      parsed: true,
-      parserError: true,
-    };
-  }
-
-  return activities.map((activity, i) => {
-    return {
-      ...activity,
-      filename: file.name + i,
-      parsed: true,
-    };
-  });
-};
-
-const parseCSV = async (e, file) => {
-  const activities = await extractCSVActivities(e);
-
-  return activities.map((a, i) => ({ ...a, filename: file.name + i }));
-};
-
-const handleFile = async file => {
-  const supportedFiles = ['pdf', 'csv'];
-  const ext = file.name.split('.').pop().toLowerCase();
-
-  console.log('this is a ' + ext);
-
-  return new Promise(resolve => {
-    let a;
-
-    // cancel if filetype is unsupported
-    if (!supportedFiles.includes(ext)) {
-      // mark import as error
-      a = {
-        filename: file.name,
-        parsed: true,
-        parserError: true,
-      };
-
-      resolve(a);
-    } else {
-      const fileReader = new FileReader();
-
-      fileReader.onload = async e => {
-        if (ext === 'pdf') {
-          a = await parsePDF(e, file);
-        } else if (ext === 'csv') {
-          console.log('csv import');
-          a = await parseCSV(e, file);
-        }
-
-        resolve(a);
-      };
-
-      if (ext === 'pdf') {
-        fileReader.readAsArrayBuffer(file);
-      } else if (ext === 'xml' || ext === 'csv') {
-        fileReader.readAsText(file);
-      }
-    }
-  });
-};
-
-const processFiles = async files => {
-  const promises = files.map(handleFile);
-  return Promise.all(promises);
-};
+// Use the webpack version to ensure, that the published version works fine and not only the src/ one.
+import getActivities, {
+  parseActivitiesFromPages,
+} from '../bundle/tresor-import';
+// To use the published version, uncomment the following line after running: npm run build
+// import getActivities, { parseActivitiesFromPages } from '../../dist/tresor-import';
 
 new Vue({
   el: '#app',
   data: {
-    message: 'Hello Vue!',
     activities: [],
+    jsonInputActive: false,
+    jsonContent: '',
+    jsonExtension: 'pdf',
   },
   methods: {
     showHoldingWarning(a) {
@@ -115,17 +48,45 @@ new Vue({
     formatPrice(p = 0) {
       return this.numberWithCommas(p.toFixed(2));
     },
-    async fileHandler() {
-      const files = this.$refs.myFiles.files;
+    handleParserResults(result) {
+      if (result.activities) {
+        console.table(result.activities);
+      }
 
-      const result = await processFiles(Array.from(files));
-      const activities = result.flat();
-
-      if (activities.length === 0) {
+      if (!result.successful) {
         return;
       }
 
-      this.activities.push(...activities);
+      this.activities.push(...result.activities);
+    },
+    loadJson() {
+      let content = undefined;
+
+      try {
+        content = JSON.parse(this.jsonContent);
+      } catch (exception) {
+        console.error(exception);
+      }
+
+      if (content === undefined) {
+        return;
+      }
+
+      const result = parseActivitiesFromPages(content, this.jsonExtension);
+
+      this.handleParserResults({
+        file: 'Json Input',
+        activities: result.activities,
+        status: result.status,
+        successful: result.activities !== undefined && result.status === 0,
+      });
+    },
+    async fileHandler() {
+      const results = await Promise.all(
+        Array.from(this.$refs.myFiles.files).map(getActivities)
+      );
+
+      results.forEach(this.handleParserResults);
     },
   },
 });
