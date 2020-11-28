@@ -1,67 +1,97 @@
-import { parseData } from '../../src/brokers/cortalconsors';
+import { findImplementation } from '@/index';
+import * as cortalconsors from '../../src/brokers/cortalconsors';
+import {
+  allSamples,
+  buySamples,
+  sellSamples,
+  dividendSamples,
+} from './__mocks__/cortalconsors';
 
-const stockBuy1 = require('./__mocks__/cortalconsors/stock_buy1.json');
-const stockSell1 = require('./__mocks__/cortalconsors/stock_sell1.json');
-const stockDividend1 = require('./__mocks__/cortalconsors/stock_dividend1.json');
-
-describe('Cortal Consors broker', () => {
+describe('Broker: Cortal Consors', () => {
   let consoleErrorSpy;
 
-  describe('Stock Buy', () => {
-    test('should map the pdf data correctly', () => {
-      const activity = parseData(stockBuy1);
+  describe('Check all documents', () => {
+    test('Can one page parsed with cortal consors', () => {
+      allSamples.forEach(samples => {
+        expect(
+          samples.some(item => cortalconsors.canParsePage(item, 'pdf'))
+        ).toEqual(true);
+      });
+    });
 
-      expect(activity).toEqual({
-        broker: 'cortalconsors',
-        type: 'Buy',
-        date: '2014-03-07',
-        isin: 'DE0008404005',
-        company: 'ALLIANZ SE VNA O.N.',
-        shares: 23,
-        price: 124.9,
-        amount: 2872.7,
-        fee: 6.9,
-        tax: 0,
+    test('Can identify a broker from one page as cortal consors', () => {
+      allSamples.forEach(samples => {
+        const implementations = findImplementation(samples, 'pdf');
+
+        expect(implementations.length).toEqual(1);
+        expect(implementations[0]).toEqual(cortalconsors);
       });
     });
   });
 
-  describe('Stock Sell', () => {
-    test('should map the pdf data correctly', () => {
-      const activity = parseData(stockSell1);
+  describe('Buy', () => {
+    test('Should map the document correctly: 2014_allianz', () => {
+      const activities = cortalconsors.parsePages(buySamples[0]).activities;
 
-      expect(activity).toEqual({
-        broker: 'cortalconsors',
-        type: 'Sell',
-        date: '2014-12-05',
-        isin: 'DE0008404005',
-        company: 'ALLIANZ SE VNA O.N.',
-        shares: 23,
-        price: 138.15521739130435,
-        amount: 3177.57,
-        fee: 4.95,
-        tax: 73.26 + 4.02,
-      });
+      expect(activities).toEqual([
+        {
+          broker: 'cortalconsors',
+          type: 'Buy',
+          date: '2014-03-07',
+          wkn: '840400',
+          isin: 'DE0008404005',
+          company: 'ALLIANZ SE VNA O.N.',
+          shares: 23,
+          price: 124.9,
+          amount: 2872.7,
+          fee: 6.9,
+          tax: 0,
+        },
+      ]);
     });
   });
 
-  describe('Stock Dividend', () => {
-    test('should map the pdf data correctly', () => {
-      const activity = parseData(stockDividend1);
+  describe('Sell', () => {
+    test('Should map the document correctly: 2014_allianz', () => {
+      const activities = cortalconsors.parsePages(sellSamples[0]).activities;
 
-      expect(activity).toEqual({
-        broker: 'cortalconsors',
-        type: 'Dividend',
-        date: '2014-05-07',
-        wkn: '840400',
-        isin: undefined,
-        company: 'Allianz SE',
-        shares: 23,
-        price: 3.902173913043478,
-        amount: 89.75,
-        fee: 0,
-        tax: 30.48 + 1.67,
-      });
+      expect(activities).toEqual([
+        {
+          broker: 'cortalconsors',
+          type: 'Sell',
+          date: '2014-12-05',
+          wkn: '840400',
+          isin: 'DE0008404005',
+          company: 'ALLIANZ SE VNA O.N.',
+          shares: 23,
+          price: 138.15521739130435,
+          amount: 3177.57,
+          fee: 4.95,
+          tax: 77.28,
+        },
+      ]);
+    });
+  });
+
+  describe('Dividend', () => {
+    test('Should map the document correctly: 2014_allianz', () => {
+      const activities = cortalconsors.parsePages(dividendSamples[0])
+        .activities;
+
+      expect(activities).toEqual([
+        {
+          broker: 'cortalconsors',
+          type: 'Dividend',
+          date: '2014-05-08',
+          wkn: '840400',
+          company: 'Allianz SE',
+          shares: 23,
+          price: 5.3,
+          amount: 121.9,
+          fee: 0,
+          tax: 32.15,
+        },
+      ]);
     });
   });
 
