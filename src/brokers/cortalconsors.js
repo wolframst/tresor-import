@@ -1,8 +1,7 @@
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 import Big from 'big.js';
-
-import { parseGermanNum } from '@/helper';
+import { parseGermanNum, validateActivity } from '@/helper';
 
 const findISIN = text => text[text.findIndex(t => t === 'ISIN') + 3];
 
@@ -10,6 +9,10 @@ const findCompany = text => text[text.findIndex(t => t === 'ISIN') + 1];
 
 const findDividendCompany = textArr =>
   textArr[textArr.findIndex(t => t === 'DIVIDENDENGUTSCHRIFT') + 2];
+
+const findBuySellWKN = content => {
+  return content[content.findIndex(line => line === 'WKN') + 3];
+};
 
 const findDividendWKN = textArr => {
   return textArr[textArr.findIndex(t => t === 'DIVIDENDENGUTSCHRIFT') + 1]
@@ -27,11 +30,9 @@ const findDateBuySell = textArr => {
   return date;
 };
 
-const findDateDividend = textArr => {
-  const keyword = 'schlusstag per';
-  const dateLine = textArr.find(t => t.toLowerCase().includes(keyword));
-  const date = dateLine.substr(dateLine.length - 10).trim();
-  return date;
+const findDateDividend = content => {
+  const line = content[content.findIndex(line => line.startsWith('WERT'))];
+  return line.split(/\s+/)[1];
 };
 
 const findShares = textArr => {
@@ -54,12 +55,14 @@ const findAmount = textArr => {
   return parseGermanNum(amount);
 };
 
-const findPayout = textArr => {
-  const payoutLine = textArr.find(
-    t => t.toLowerCase && t.toLowerCase().includes('wert')
-  );
-  const payoutString = payoutLine.split('EUR').pop().trim();
-  return parseGermanNum(payoutString);
+const findPayout = content => {
+  const lineNumber = content.findIndex(line => line.includes('BRUTTO'));
+
+  if (lineNumber <= 0) {
+    return undefined;
+  }
+
+  return parseGermanNum(content[lineNumber].split(/\s+/)[2]);
 };
 
 const findFee = textArr => {
@@ -104,73 +107,63 @@ const findDividendTax = textArr => {
   return Math.abs(+sum);
 };
 
-const isBuy = textArr => {
-  const idx = textArr.findIndex(
-    t => t.toLowerCase() === 'wertpapierabrechnung'
+const isBuy = content => {
+  const lineNumber = content.findIndex(line =>
+    line.includes('WERTPAPIERABRECHNUNG')
   );
-  return idx >= 0 && textArr[idx + 1].toLowerCase() === 'kauf';
+  return lineNumber > 0 && content[lineNumber + 1] === 'KAUF';
 };
 
-const isSell = textArr => {
-  const idx = textArr.findIndex(
-    t => t.toLowerCase() === 'wertpapierabrechnung'
+const isSell = content => {
+  const lineNumber = content.findIndex(line =>
+    line.includes('WERTPAPIERABRECHNUNG')
   );
-  return idx >= 0 && textArr[idx + 1].toLowerCase() === 'verkauf';
+  return lineNumber > 0 && content[lineNumber + 1] === 'VERKAUF';
 };
 
-const isDividend = textArr =>
-  textArr.some(t =>
-    ['ertragsgutschrift', 'dividendengutschrift'].includes(t.toLowerCase())
-  );
+const isDividend = content =>
+  content.some(line => line.includes('DIVIDENDENGUTSCHRIFT'));
 
-export const canParseData = textArr => {
-  const isCortalConsors = textArr.some(t => {
-    return t.toLowerCase && t.toLowerCase().includes('cortal consors s.a.');
-  });
+export const canParsePage = (content, extension) =>
+  extension === 'pdf' &&
+  content.some(line => line.includes('Cortal Consors')) &&
+  (isBuy(content) || isSell(content) || isDividend(content));
 
-  if (!isCortalConsors) {
-    return false;
-  }
-
-  const isSupportedType =
-    isBuy(textArr) || isSell(textArr) || isDividend(textArr);
-
-  return isSupportedType;
-};
-
-export const parseData = textArr => {
+const parseData = content => {
   let type, date, isin, wkn, company, shares, price, amount, fee, tax;
 
-  if (isBuy(textArr)) {
+  if (isBuy(content)) {
     type = 'Buy';
-    isin = findISIN(textArr);
-    company = findCompany(textArr);
-    date = findDateBuySell(textArr);
-    shares = findShares(textArr);
-    amount = findAmount(textArr);
+    wkn = findBuySellWKN(content);
+    isin = findISIN(content);
+    company = findCompany(content);
+    date = findDateBuySell(content);
+    shares = findShares(content);
+    amount = findAmount(content);
     price = +Big(amount).div(Big(shares));
-    fee = findFee(textArr);
+    fee = findFee(content);
     tax = 0;
-  } else if (isSell(textArr)) {
+  } else if (isSell(content)) {
     type = 'Sell';
-    isin = findISIN(textArr);
-    company = findCompany(textArr);
-    date = findDateBuySell(textArr);
-    shares = findShares(textArr);
-    amount = findAmount(textArr);
+    wkn = findBuySellWKN(content);
+    isin = findISIN(content);
+    company = findCompany(content);
+    date = findDateBuySell(content);
+    shares = findShares(content);
+    amount = findAmount(content);
     price = +Big(amount).div(Big(shares));
-    fee = findFee(textArr);
-    tax = findTax(textArr);
-  } else if (isDividend(textArr)) {
+    fee = findFee(content);
+    tax = findTax(content);
+  } else if (isDividend(content)) {
     type = 'Dividend';
-    wkn = findDividendWKN(textArr);
-    company = findDividendCompany(textArr);
-    date = findDateDividend(textArr);
-    shares = findDividendShares(textArr);
-    amount = findPayout(textArr);
+    wkn = findDividendWKN(content);
+    company = findDividendCompany(content);
+    date = findDateDividend(content);
+    shares = findDividendShares(content);
+    amount = findPayout(content);
     price = +Big(amount).div(Big(shares));
     fee = 0;
-    tax = findDividendTax(textArr);
+    tax = findDividendTax(content);
   }
 
   const activity = {
@@ -178,7 +171,6 @@ export const parseData = textArr => {
     type,
     date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
     wkn,
-    isin,
     company,
     shares,
     price,
@@ -187,30 +179,16 @@ export const parseData = textArr => {
     tax,
   };
 
-  // Since we do not receive the ISIN from a dividend pdf,
-  // it is okay that the ISIN maybe undefined.
-  const valid =
-    (!!activity.broker || activity.broker === 0) &&
-    (!!activity.type || activity.type === 0) &&
-    (!!activity.date || activity.date === 0) &&
-    // (!!activity.wkn || activity.wkn === 0) &&
-    (!!activity.company || activity.company === 0) &&
-    (!!activity.shares || activity.shares === 0) &&
-    (!!activity.price || activity.price === 0) &&
-    (!!activity.amount || activity.amount === 0) &&
-    (!!activity.fee || activity.fee === 0) &&
-    (!!activity.tax || activity.tax === 0);
-
-  if (!valid) {
-    console.error('Error while parsing PDF', activity);
-    return undefined;
-  } else {
-    return activity;
+  if (isin !== undefined) {
+    activity.isin = isin;
   }
+
+  return validateActivity(activity);
 };
 
 export const parsePages = contents => {
-  // only first page has activity data
-  const activity = parseData(contents[0]);
-  return [activity];
+  return {
+    activities: [parseData(contents[0])],
+    status: 0,
+  };
 };
