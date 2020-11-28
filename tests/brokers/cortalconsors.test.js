@@ -49,6 +49,26 @@ describe('Broker: Cortal Consors', () => {
         },
       ]);
     });
+
+    test('Should map the document correctly: 2014_ishares_etf_with_commission.json', () => {
+      const activities = cortalconsors.parsePages(buySamples[1]).activities;
+
+      expect(activities).toEqual([
+        {
+          broker: 'cortalconsors',
+          type: 'Buy',
+          date: '2014-02-17',
+          wkn: '251124',
+          isin: 'DE0002511243',
+          company: 'ISHS-EO CO.BD LA.C.UTS DZ',
+          shares: 0.38007,
+          price: 129.60770384402872,
+          amount: 49.26,
+          fee: 0.74,
+          tax: 0,
+        },
+      ]);
+    });
   });
 
   describe('Sell', () => {

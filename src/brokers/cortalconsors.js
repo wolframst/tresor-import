@@ -65,19 +65,37 @@ const findPayout = content => {
   return parseGermanNum(content[lineNumber].split(/\s+/)[2]);
 };
 
-const findFee = textArr => {
-  const brokerageIdx = textArr.findIndex(
-    t => t.toLowerCase() === 'eig. spesen'
-  );
-  const brokerage = brokerageIdx >= 0 ? textArr[brokerageIdx + 2] : null;
-  const baseFeeIdx = textArr.findIndex(t => t.toLowerCase() === 'grundgebühr');
-  const baseFee = baseFeeIdx >= 0 ? textArr[baseFeeIdx + 2] : null;
+const findFee = content => {
+  let totalFee = Big(0);
 
-  const sum = +Big(parseGermanNum(brokerage)).plus(
-    Big(parseGermanNum(baseFee))
-  );
+  // Provision:
+  {
+    const lineNumber = content.findIndex(line => line.includes('Provision'));
 
-  return Math.abs(sum);
+    if (lineNumber > 0) {
+      totalFee = totalFee.plus(parseGermanNum(content[lineNumber + 2]));
+    }
+  }
+
+  // Eig. Spesen
+  {
+    const lineNumber = content.findIndex(line => line.includes('Eig. Spesen'));
+
+    if (lineNumber > 0) {
+      totalFee = totalFee.plus(parseGermanNum(content[lineNumber + 2]));
+    }
+  }
+
+  // Grundgebühr
+  {
+    const lineNumber = content.findIndex(line => line.includes('Grundgebühr'));
+
+    if (lineNumber > 0) {
+      totalFee = totalFee.plus(parseGermanNum(content[lineNumber + 2]));
+    }
+  }
+
+  return +totalFee;
 };
 
 const findTax = textArr => {

@@ -1,4 +1,7 @@
-export const buySamples = [require('./buy/2014_allianz.json')];
+export const buySamples = [
+  require('./buy/2014_allianz.json'),
+  require('./buy/2014_ishares_etf_with_commission.json'),
+];
 
 export const sellSamples = [require('./sell/2014_allianz.json')];
 
