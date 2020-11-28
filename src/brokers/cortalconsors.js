@@ -119,12 +119,15 @@ const findFee = content => {
 const findTax = textArr => {
   const kapstIdx = textArr.findIndex(t => t.toLowerCase() === 'kapst');
   const solzIdx = textArr.findIndex(t => t.toLowerCase() === 'solz');
+  const churchIdx = textArr.findIndex(t => t.toLowerCase() === 'kirch');
 
   const kapst = kapstIdx >= 0 ? textArr[kapstIdx + 3] : null;
   const solz = solzIdx >= 0 ? textArr[solzIdx + 3] : null;
-  const sum = +Big(parseGermanNum(kapst)).plus(Big(parseGermanNum(solz)));
+  const church = churchIdx >= 0 ? textArr[churchIdx + 3] : null;
 
-  return Math.abs(sum);
+  return +Big(parseGermanNum(kapst))
+    .plus(Big(parseGermanNum(solz)))
+    .plus(Big(parseGermanNum(church)));
 };
 
 const findDividendTax = textArr => {
