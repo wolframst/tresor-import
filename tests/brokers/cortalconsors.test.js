@@ -113,6 +113,26 @@ describe('Broker: Cortal Consors', () => {
         },
       ]);
     });
+
+    test('Should map the document correctly: 2014_etf_x-tracke', () => {
+      const activities = cortalconsors.parsePages(dividendSamples[1])
+        .activities;
+
+      expect(activities).toEqual([
+        {
+          broker: 'cortalconsors',
+          type: 'Dividend',
+          date: '2014-07-31',
+          wkn: 'DBX0NH',
+          company: 'db x-tracke.DAX U.ETF(DR)-Inc.',
+          shares: 7.45056,
+          price: 3.469537860241378,
+          amount: 25.85,
+          fee: 0,
+          tax: 0,
+        },
+      ]);
+    });
   });
 
   beforeEach(() => {

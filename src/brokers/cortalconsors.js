@@ -7,18 +7,36 @@ const findISIN = text => text[text.findIndex(t => t === 'ISIN') + 3];
 
 const findCompany = text => text[text.findIndex(t => t === 'ISIN') + 1];
 
-const findDividendCompany = textArr =>
-  textArr[textArr.findIndex(t => t === 'DIVIDENDENGUTSCHRIFT') + 2];
+const findDividendCompany = content => {
+  let lineNumber = content.findIndex(
+    line =>
+      line.includes('ERTRAGSGUTSCHRIFT') ||
+      line.includes('DIVIDENDENGUTSCHRIFT')
+  );
+
+  if (lineNumber <= 0) {
+    return undefined;
+  }
+
+  return content[lineNumber + 2];
+};
 
 const findBuySellWKN = content => {
   return content[content.findIndex(line => line === 'WKN') + 3];
 };
 
-const findDividendWKN = textArr => {
-  return textArr[textArr.findIndex(t => t === 'DIVIDENDENGUTSCHRIFT') + 1]
-    .split('WKN:')
-    .pop()
-    .trim();
+const findDividendWKN = content => {
+  let lineNumber = content.findIndex(
+    line =>
+      line.includes('ERTRAGSGUTSCHRIFT') ||
+      line.includes('DIVIDENDENGUTSCHRIFT')
+  );
+
+  if (lineNumber <= 0) {
+    return undefined;
+  }
+
+  return content[lineNumber + 1].split('WKN:').pop().trim();
 };
 
 const findDateBuySell = textArr => {
@@ -140,7 +158,11 @@ const isSell = content => {
 };
 
 const isDividend = content =>
-  content.some(line => line.includes('DIVIDENDENGUTSCHRIFT'));
+  content.some(
+    line =>
+      line.includes('DIVIDENDENGUTSCHRIFT') ||
+      line.includes('ERTRAGSGUTSCHRIFT')
+  );
 
 export const canParsePage = (content, extension) =>
   extension === 'pdf' &&
