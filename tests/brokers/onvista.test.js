@@ -391,5 +391,25 @@ describe('Broker: onvista', () => {
         },
       ]);
     });
+
+    test('Can map the dividend file correctly: 2019_MetLife', () => {
+      const activities = onvista.parsePages(dividendsSamples[4]).activities;
+
+      expect(activities).toEqual([
+        {
+          broker: 'onvista',
+          type: 'Dividend',
+          date: '2019-06-13',
+          datetime: '2019-06-13T' + activities[0].datetime.substring(11),
+          isin: 'US59156R1086',
+          company: 'MetLife Inc. Registered Shares DL -,01',
+          shares: 6,
+          price: 0.38666666666666666,
+          amount: 2.32,
+          fee: 0,
+          tax: 0.38,
+        },
+      ]);
+    });
   });
 });
