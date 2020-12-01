@@ -1,7 +1,8 @@
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-
-import { parseGermanNum } from '@/helper';
+import {
+  parseGermanNum,
+  validateActivity,
+  createActivityDateTime,
+} from '@/helper';
 
 const offsets = {
   shares: 0,
@@ -107,10 +108,14 @@ const parseData = textArr => {
     tax = 0;
   }
 
-  return {
+  // For postbank, all our mock documents did not contains an order execution time.
+  const [parsedDate, parsedDateTime] = createActivityDateTime(date, undefined);
+
+  return validateActivity({
     broker: 'postbank',
     type,
-    date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
+    date: parsedDate,
+    datetime: parsedDateTime,
     isin,
     company,
     shares,
@@ -118,7 +123,7 @@ const parseData = textArr => {
     amount,
     fee,
     tax,
-  };
+  });
 };
 
 export const parsePages = contents => {

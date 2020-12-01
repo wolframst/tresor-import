@@ -29,15 +29,16 @@ describe('Broker: Postbank', () => {
 
   describe('Buy', () => {
     test('should map pdf data of buy_savings_plan_vanguard_ftse_all_world_1.json correctly', () => {
-      const activity = postbank.parsePages(buySamples[0]).activities;
+      const activities = postbank.parsePages(buySamples[0]).activities;
 
-      expect(activity).toEqual([
+      expect(activities).toEqual([
         {
           type: 'Buy',
           amount: 800,
           broker: 'postbank',
           company: 'VANGUARD FTSE ALL-WORLD U.ETF',
           date: '2020-10-05',
+          datetime: '2020-10-05T' + activities[0].datetime.substring(11),
           isin: 'IE00B3RBWM25',
           price: 79.68,
           shares: 10.0402,
@@ -50,15 +51,16 @@ describe('Broker: Postbank', () => {
 
   describe('Dividend', () => {
     test('should map pdf data of dividend_vanguard_ftse_all_world_1.json correctly', () => {
-      const activity = postbank.parsePages(dividendSamples[0]).activities;
+      const activities = postbank.parsePages(dividendSamples[0]).activities;
 
-      expect(activity).toEqual([
+      expect(activities).toEqual([
         {
           type: 'Dividend',
           amount: 50.8,
           broker: 'postbank',
           company: 'VANGUARD FTSE ALL-WORLD U.ETF',
           date: '2020-10-07',
+          datetime: '2020-10-07T' + activities[0].datetime.substring(11),
           isin: 'IE00B3RBWM25',
           price: 0.38539358319683975,
           shares: 131.8133,
