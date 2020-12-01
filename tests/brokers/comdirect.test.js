@@ -168,10 +168,31 @@ describe('Broker: comdirect', () => {
         tax: 0,
       });
     });
+
+    test('Can parse the buy order: 2020_usd_epr_properties', () => {
+      const result = comdirect.parsePages(buySamples[7]).activities;
+
+      expect(result.length).toEqual(1);
+      expect(result[0]).toEqual({
+        broker: 'comdirect',
+        type: 'Buy',
+        date: '2019-01-30',
+        isin: 'US26884U1097',
+        wkn: 'A1J78V',
+        company: 'EPR Properties',
+        shares: 16,
+        price: 63.0476522953395,
+        amount: 1008.762436725432,
+        fee: 25.027563274568,
+        tax: 0,
+        foreignCurrency: 'USD',
+        fxRate: 1.1458,
+      });
+    });
   });
 
   describe('Validate Sells', () => {
-    test('Can the order parsed from saving_plan', () => {
+    test('Can parse the sell order: 2020_eur_stock_biontech', () => {
       const result = comdirect.parsePages(sellSamples[0]);
 
       expect(result.activities.length).toEqual(1);
@@ -189,7 +210,48 @@ describe('Broker: comdirect', () => {
         tax: 3858.01,
       });
     });
+
+    test('Can parse the sell order: 2020_usd_arcimoto', () => {
+      const result = comdirect.parsePages(sellSamples[1]).activities;
+
+      expect(result.length).toEqual(1);
+      expect(result[0]).toEqual({
+        broker: 'comdirect',
+        type: 'Sell',
+        date: '2020-11-20',
+        isin: 'US0395871009',
+        wkn: 'A2JN1H',
+        company: 'Arcimoto Inc.',
+        shares: 75,
+        price: 12.250712250712251,
+        amount: 918.8034188034188,
+        fee: 24.5534188034188,
+        tax: 0,
+        foreignCurrency: 'USD',
+        fxRate: 1.1934,
+      });
+    });
+
+    test('Can parse the sell order: 2020_eur_stock_wirecard', () => {
+      const result = comdirect.parsePages(sellSamples[2]).activities;
+
+      expect(result.length).toEqual(1);
+      expect(result[0]).toEqual({
+        broker: 'comdirect',
+        type: 'Sell',
+        date: '2020-03-18',
+        isin: 'DE0007472060',
+        wkn: '747206',
+        company: 'Wirecard AG',
+        shares: 5,
+        price: 83.06,
+        amount: 415.3,
+        fee: 6.4,
+        tax: 0,
+      });
+    });
   });
+
   describe('Validate dividends', () => {
     test('Can the dividend in USD parsed from the document', () => {
       const result = comdirect.parsePages(dividendSamples[0]);
