@@ -31,12 +31,13 @@ describe('Smartbroker broker test', () => {
 
   describe('Buy', () => {
     test('should map pdf data of sample 1 correctly', () => {
-      const result = smartbroker.parsePages(buySamples[0]);
+      const activities = smartbroker.parsePages(buySamples[0]).activities;
 
-      expect(result.activities[0]).toEqual({
+      expect(activities[0]).toEqual({
         broker: 'smartbroker',
         type: 'Buy',
         date: '2020-06-24',
+        datetime: '2020-06-24T15:33:00.000Z',
         isin: 'US0028241000',
         company: 'Abbott Laboratories Registered Shares o.N.',
         shares: 14,
@@ -50,12 +51,13 @@ describe('Smartbroker broker test', () => {
 
   describe('Sell', () => {
     test('should map pdf data of sell comission vanguard correctly', () => {
-      const result = smartbroker.parsePages(sellSamples[0]);
+      const activities = smartbroker.parsePages(sellSamples[0]).activities;
 
-      expect(result.activities[0]).toEqual({
+      expect(activities[0]).toEqual({
         broker: 'smartbroker',
         type: 'Sell',
         date: '2020-11-05',
+        datetime: '2020-11-05T08:48:00.000Z',
         isin: 'IE00B3RBWM25',
         company: 'Vanguard FTSE All-World U.ETF Registered Shares USD Dis.oN',
         shares: 26,
@@ -69,12 +71,13 @@ describe('Smartbroker broker test', () => {
 
   describe('Dividend', () => {
     test('should parse dividend_etf_usd correctly', () => {
-      const result = smartbroker.parsePages(dividendSamples[0]);
+      const activities = smartbroker.parsePages(dividendSamples[0]).activities;
 
-      expect(result.activities[0]).toEqual({
+      expect(activities[0]).toEqual({
         broker: 'smartbroker',
         type: 'Dividend',
         date: '2020-10-07',
+        datetime: '2020-10-07T' + activities[0].datetime.substring(11),
         isin: 'IE00BZ163L38',
         company: 'Vang.USD Em.Mkts Gov.Bd U.ETF Registered Shares USD Dis.oN',
         shares: 445,
@@ -86,12 +89,13 @@ describe('Smartbroker broker test', () => {
     });
 
     test('should parse dividend_stock_usd correctly', () => {
-      const result = smartbroker.parsePages(dividendSamples[1]);
+      const activities = smartbroker.parsePages(dividendSamples[1]).activities;
 
-      expect(result.activities[0]).toEqual({
+      expect(activities[0]).toEqual({
         broker: 'smartbroker',
         type: 'Dividend',
         date: '2020-09-30',
+        datetime: '2020-09-30T' + activities[0].datetime.substring(11),
         isin: 'US7134481081',
         company: 'PepsiCo Inc. Registered Shares DL -,0166',
         shares: 9,
@@ -103,12 +107,13 @@ describe('Smartbroker broker test', () => {
     });
 
     test('should parse dividend_stock_usd_2 correctly', () => {
-      const result = smartbroker.parsePages(dividendSamples[2]);
+      const activities = smartbroker.parsePages(dividendSamples[2]).activities;
 
-      expect(result.activities[0]).toEqual({
+      expect(activities[0]).toEqual({
         broker: 'smartbroker',
         type: 'Dividend',
         date: '2020-10-30',
+        datetime: '2020-10-30T' + activities[0].datetime.substring(11),
         isin: 'US5021751020',
         company: 'LTC Properties Inc. Registered Shares DL -,01',
         shares: 32,
