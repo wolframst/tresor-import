@@ -1,7 +1,10 @@
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
 import Big from 'big.js';
-import { parseGermanNum, validateActivity } from '@/helper';
+import {
+  parseGermanNum,
+  validateActivity,
+  createActivityDateTime,
+  timeRegex,
+} from '@/helper';
 
 const findISIN = text => text[text.findIndex(t => t === 'ISIN') + 3];
 
@@ -40,12 +43,27 @@ const findDividendWKN = content => {
 };
 
 const findDateBuySell = textArr => {
-  const idx = textArr.findIndex(
-    t => t.toLowerCase() === 'wertpapierabrechnung'
+  const lineNumber = textArr.findIndex(
+    line => line.toLowerCase() === 'wertpapierabrechnung'
   );
-  const date = textArr[idx + 2].substr(3, 10).trim();
 
-  return date;
+  return textArr[lineNumber + 2].substr(3, 10).trim();
+};
+
+const findOrderTime = content => {
+  // Extract the time before the line with order time which contains "18:20:51"
+  const lineNumber = content.findIndex(line => line === 'UM');
+
+  if (lineNumber <= 0) {
+    return undefined;
+  }
+
+  const lineContent = content[lineNumber + 1];
+  if (lineContent === undefined || !timeRegex(true).test(lineContent)) {
+    return undefined;
+  }
+
+  return lineContent.trim();
 };
 
 const findDateDividend = content => {
@@ -173,7 +191,7 @@ export const canParsePage = (content, extension) =>
   (isBuy(content) || isSell(content) || isDividend(content));
 
 const parseData = content => {
-  let type, date, isin, wkn, company, shares, price, amount, fee, tax;
+  let type, date, time, isin, wkn, company, shares, price, amount, fee, tax;
 
   if (isBuy(content)) {
     type = 'Buy';
@@ -181,6 +199,7 @@ const parseData = content => {
     isin = findISIN(content);
     company = findCompany(content);
     date = findDateBuySell(content);
+    time = findOrderTime(content);
     shares = findShares(content);
     amount = findAmount(content);
     price = +Big(amount).div(Big(shares));
@@ -192,6 +211,7 @@ const parseData = content => {
     isin = findISIN(content);
     company = findCompany(content);
     date = findDateBuySell(content);
+    time = findOrderTime(content);
     shares = findShares(content);
     amount = findAmount(content);
     price = +Big(amount).div(Big(shares));
@@ -209,10 +229,18 @@ const parseData = content => {
     tax = findDividendTax(content);
   }
 
+  const [parsedDate, parsedDateTime] = createActivityDateTime(
+    date,
+    time,
+    'dd.MM.yyyy',
+    'dd.MM.yyyy HH:mm:ss'
+  );
+
   const activity = {
     broker: 'cortalconsors',
     type,
-    date: format(parse(date, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd'),
+    date: parsedDate,
+    datetime: parsedDateTime,
     wkn,
     company,
     shares,
