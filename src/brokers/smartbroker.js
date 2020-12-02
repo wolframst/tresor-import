@@ -1,5 +1,9 @@
 import { Big } from 'big.js';
-import { parseGermanNum, validateActivity } from '@/helper';
+import {
+  parseGermanNum,
+  validateActivity,
+  createActivityDateTime,
+} from '@/helper';
 import * as onvista from './onvista';
 
 const findTax = (textArr, fxRate) => {
@@ -92,6 +96,18 @@ const findPayout = content => {
   return parseGermanNum(content[payoutIndex + 2]);
 };
 
+const findOrderTime = content => {
+  // Extract the time after the line with Handelszeit which contains "17:33*"
+  const searchTerm = 'Handelszeit';
+  const lineNumber = content.findIndex(t => t.includes(searchTerm));
+
+  if (lineNumber < 0) {
+    return undefined;
+  }
+
+  return content[lineNumber + 1].trim().substr(0, 5);
+};
+
 export const canParsePage = (content, extension) =>
   extension === 'pdf' &&
   content.some(line =>
@@ -102,12 +118,11 @@ export const canParsePage = (content, extension) =>
     onvista.isDividend(content));
 
 const parseData = textArr => {
-  let activity;
   const broker = 'smartbroker';
   const shares = onvista.findShares(textArr);
   const isin = onvista.findISIN(textArr);
   const company = onvista.findCompany(textArr);
-  let type, amount, date, price, fxRate, foreignCurrency;
+  let type, amount, date, time, price, fxRate, foreignCurrency;
   let tax = 0;
   let witholdingTax = 0;
   let fee = 0;
@@ -118,12 +133,14 @@ const parseData = textArr => {
     type = 'Buy';
     amount = onvista.findAmount(textArr);
     date = onvista.findDateBuySell(textArr);
+    time = findOrderTime(textArr);
     price = onvista.findPrice(textArr);
     fee = onvista.findFee(textArr);
   } else if (onvista.isSell(textArr)) {
     type = 'Sell';
     amount = onvista.findAmount(textArr);
     date = onvista.findDateBuySell(textArr);
+    time = findOrderTime(textArr);
     price = onvista.findPrice(textArr);
     [tax, witholdingTax] = findTax(textArr, fxRate);
   } else if (onvista.isDividend(textArr)) {
@@ -135,11 +152,14 @@ const parseData = textArr => {
     price = +Big(amount).div(shares);
   }
 
-  activity = {
+  const [parsedDate, parsedDateTime] = createActivityDateTime(date, time);
+
+  let activity = {
     broker,
     type,
     shares,
-    date,
+    date: parsedDate,
+    datetime: parsedDateTime,
     isin,
     company,
     price,
