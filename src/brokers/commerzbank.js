@@ -29,7 +29,11 @@ const findSharesBuy = textArr => {
 
 const findSharesDividend = textArr => {
   return Big(
-    parseGermanNum(textArr[textArr.findIndex(t => t.includes('Stk.') || t.includes('STK')) + 1])
+    parseGermanNum(
+      textArr[
+        textArr.findIndex(t => t.includes('Stk.') || t.includes('STK')) + 1
+      ]
+    )
   );
 };
 
@@ -54,7 +58,7 @@ const findWknBuy = textArr => {
   const wknRoughIdx = textArr.indexOf('Wertpapierkennnummer');
   const slicedArry = textArr.slice(wknRoughIdx);
   return slicedArry[slicedArry.findIndex(t => /^[0-9A-Z]{6}$/.test(t))];
-}
+};
 
 const findWknDividend = textArr =>
   textArr[textArr.findIndex(t => t.includes('WKN')) + 3];
