@@ -29,14 +29,14 @@ describe('Broker: commerzbank', () => {
   });
 
   describe('Validate buys', () => {
-    test('Can a buy order be parsed from the document', () => {
+    test('Can a buy order for A1T8FV_1 be parsed from the document', () => {
       const result = commerzbank.parsePages(buySamples[0]);
 
       expect(result.activities.length).toEqual(1);
       expect(result.activities[0]).toEqual({
         broker: 'commerzbank',
         type: 'Buy',
-        date: '2020-01-06',
+        date: '2020-01-03',
         wkn: 'A1T8FV',
         company: 'Vang.FTSE A.-Wo.Hi.Di.Yi.U.ETF',
         shares: 4.76,
@@ -53,7 +53,7 @@ describe('Broker: commerzbank', () => {
       expect(result.activities[0]).toEqual({
         broker: 'commerzbank',
         type: 'Buy',
-        date: '2020-01-06',
+        date: '2020-01-03',
         wkn: 'A1JX51',
         company: 'Vanguard FTSE Em.Markets U.ETF',
         shares: 0.906,
@@ -70,7 +70,7 @@ describe('Broker: commerzbank', () => {
       expect(result.activities[0]).toEqual({
         broker: 'commerzbank',
         type: 'Buy',
-        date: '2020-01-17',
+        date: '2020-01-15',
         wkn: 'A1JX51',
         company: 'Vanguard FTSE Em.Markets U.ETF',
         shares: 0.899,
@@ -87,7 +87,7 @@ describe('Broker: commerzbank', () => {
       expect(result.activities[0]).toEqual({
         broker: 'commerzbank',
         type: 'Buy',
-        date: '2020-01-06',
+        date: '2020-01-03',
         wkn: 'A1JX52',
         company: 'Vanguard FTSE All-World U.ETF',
         shares: 2.975,
@@ -104,7 +104,7 @@ describe('Broker: commerzbank', () => {
       expect(result.activities[0]).toEqual({
         broker: 'commerzbank',
         type: 'Buy',
-        date: '2020-01-17',
+        date: '2020-01-15',
         wkn: 'A1JX52',
         company: 'Vanguard FTSE All-World U.ETF',
         shares: 2.949,
@@ -121,7 +121,7 @@ describe('Broker: commerzbank', () => {
       expect(result.activities[0]).toEqual({
         broker: 'commerzbank',
         type: 'Buy',
-        date: '2020-01-17',
+        date: '2020-01-15',
         wkn: 'A1T8FV',
         company: 'Vang.FTSE A.-Wo.Hi.Di.Yi.U.ETF',
         shares: 4.776,

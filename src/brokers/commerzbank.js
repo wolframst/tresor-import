@@ -109,56 +109,53 @@ const isForeignDividend = textArr =>
   textArr.some(t => t.includes('Ertragsgutschrift'));
 
 const parseSingleTransaction = textArr => {
+  let type, date, wkn, isin, company, shares, price, amount;
+  let fee = 0;
+  let tax = 0;
   let activity;
   if (isBuy(textArr)) {
-    const foundAmount = Big(findAmountBuy(textArr));
-    const foundShares = findSharesBuy(textArr);
-    activity = {
-      broker: 'commerzbank',
-      type: 'Buy',
-      date: findDateBuy(textArr),
-      wkn: findWknBuy(textArr),
-      company: findCompanyBuy(textArr),
-      shares: +foundShares,
-      price: +foundAmount.div(foundShares),
-      amount: +foundAmount,
-      fee: 0,
-      tax: 0,
-    };
+    type = 'Buy';
+    date = findDateBuy(textArr);
+    wkn = findWknBuy(textArr);
+    company = findCompanyBuy(textArr);
+    shares = +findSharesBuy(textArr);
+    amount = findAmountBuy(textArr);
+    price = +Big(amount).div(shares);
   } else if (isDividend(textArr)) {
-    const foundAmount = Big(findAmountDividend(textArr));
-    const foundShares = findSharesDividend(textArr);
-    activity = {
-      broker: 'commerzbank',
-      type: 'Dividend',
-      date: findDateDividend(textArr),
-      wkn: findWknDividend(textArr),
-      isin: findIsinDividend(textArr),
-      company: findCompanyDividend(textArr),
-      shares: +foundShares,
-      price: +foundAmount.div(foundShares),
-      amount: +foundAmount,
-      fee: 0,
-      tax: +findTaxDividend(textArr),
-    };
+    type = 'Dividend';
+    date = findDateDividend(textArr);
+    wkn = findWknDividend(textArr);
+    isin = findIsinDividend(textArr);
+    company = findCompanyDividend(textArr);
+    shares = +findSharesDividend(textArr);
+    amount = findAmountDividend(textArr);
+    price = +Big(amount).div(shares);
+    tax = +findTaxDividend(textArr);
   } else if (isForeignDividend(textArr)) {
-    const foundAmount = Big(findAmountForeignDividend(textArr));
-    const foundShares = findSharesForeignDividend(textArr);
-    activity = {
-      broker: 'commerzbank',
-      type: 'Dividend',
-      date: findDateForeignDividend(textArr),
-      wkn: findWknForeignDividend(textArr),
-      isin: findIsinForeignDividend(textArr),
-      company: findCompanyForeignDividend(textArr),
-      shares: +findSharesForeignDividend(textArr),
-      price: +foundAmount.div(foundShares),
-      amount: +foundAmount,
-      fee: 0,
-      tax: 0,
-    };
+    type = 'Dividend';
+    date = findDateForeignDividend(textArr);
+    wkn = findWknForeignDividend(textArr);
+    isin = findIsinForeignDividend(textArr);
+    company = findCompanyForeignDividend(textArr);
+    shares = +findSharesForeignDividend(textArr);
+    amount = findAmountForeignDividend(textArr);
+    price = +Big(amount).div(shares);
   }
-  console.log(activity);
+  activity = {
+    broker: 'commerzbank',
+    type,
+    date,
+    wkn,
+    company,
+    shares,
+    price,
+    amount,
+    fee,
+    tax,
+  };
+  if (isin !== undefined) {
+    activity.isin = isin;
+  }
   return validateActivity(activity);
 };
 
@@ -315,7 +312,7 @@ export const canParsePage = (content, extension) => {
   // The first PDF Page does not always contain "Commerzbank", thus this ugly
   // workaround. e. G. dividend_IE00B3RBWM25_1.json
   if (!Array.isArray(content)) {
-    return undefined
+    return undefined;
   }
   const joinedContent = content.join('');
   return (
