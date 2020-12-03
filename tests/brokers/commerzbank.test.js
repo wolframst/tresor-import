@@ -37,6 +37,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Buy',
         date: '2020-01-03',
+        datetime: '2020-01-03T' + result.activities[0].datetime.substring(11),
         wkn: 'A1T8FV',
         company: 'Vang.FTSE A.-Wo.Hi.Di.Yi.U.ETF',
         shares: 4.76,
@@ -54,6 +55,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Buy',
         date: '2020-01-03',
+        datetime: '2020-01-03T' + result.activities[0].datetime.substring(11),
         wkn: 'A1JX51',
         company: 'Vanguard FTSE Em.Markets U.ETF',
         shares: 0.906,
@@ -71,6 +73,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Buy',
         date: '2020-01-15',
+        datetime: '2020-01-15T' + result.activities[0].datetime.substring(11),
         wkn: 'A1JX51',
         company: 'Vanguard FTSE Em.Markets U.ETF',
         shares: 0.899,
@@ -88,6 +91,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Buy',
         date: '2020-01-03',
+        datetime: '2020-01-03T' + result.activities[0].datetime.substring(11),
         wkn: 'A1JX52',
         company: 'Vanguard FTSE All-World U.ETF',
         shares: 2.975,
@@ -105,6 +109,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Buy',
         date: '2020-01-15',
+        datetime: '2020-01-15T' + result.activities[0].datetime.substring(11),
         wkn: 'A1JX52',
         company: 'Vanguard FTSE All-World U.ETF',
         shares: 2.949,
@@ -122,6 +127,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Buy',
         date: '2020-01-15',
+        datetime: '2020-01-15T' + result.activities[0].datetime.substring(11),
         wkn: 'A1T8FV',
         company: 'Vang.FTSE A.-Wo.Hi.Di.Yi.U.ETF',
         shares: 4.776,
@@ -134,7 +140,7 @@ describe('Broker: commerzbank', () => {
   });
 
   describe('Validate dividends', () => {
-    test('Can the dividend for  be parsed correctly', () => {
+    test('Can the dividend for IE00B3RBWM25_1 be parsed correctly', () => {
       const result = commerzbank.parsePages(dividendSamples[0]);
 
       expect(result.activities.length).toEqual(1);
@@ -142,6 +148,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Dividend',
         date: '2020-04-14',
+        datetime: '2020-04-14T' + result.activities[0].datetime.substring(11),
         isin: 'IE00B3RBWM25',
         wkn: 'A1JX52',
         company: 'VANG.FTSE A.-WO.U.ETF',
@@ -153,7 +160,7 @@ describe('Broker: commerzbank', () => {
       });
     });
 
-    test('Can the dividend for  be parsed correctly', () => {
+    test('Can the dividend for IE00B8GKDB10_2 be parsed correctly', () => {
       const result = commerzbank.parsePages(dividendSamples[5]);
 
       expect(result.activities.length).toEqual(1);
@@ -161,6 +168,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Dividend',
         date: '2020-06-26',
+        datetime: "2020-06-26T" + result.activities[0].datetime.substring(11),
         isin: 'IE00B8GKDB10',
         wkn: 'A1T8FV',
         company: 'VA.FTSE A.W.H.D.Y.UETFDLD',
@@ -172,7 +180,7 @@ describe('Broker: commerzbank', () => {
       });
     });
 
-    test('Can the dividend of another currency be parsed correctly', () => {
+    test('Can the foreign dividend for IE00B3RBWM25_2 in another currency be parsed correctly', () => {
       const result = commerzbank.parsePages(dividendSamples[6]);
 
       expect(result.activities.length).toEqual(1);
@@ -180,6 +188,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Dividend',
         date: '2020-06-26',
+        datetime: '2020-06-26T' + result.activities[0].datetime.substring(11),
         isin: 'IE00B3RBWM25',
         wkn: 'A1JX52',
         company: 'Vanguard FTSE All-World U.ETF',
@@ -188,6 +197,8 @@ describe('Broker: commerzbank', () => {
         amount: 25.19,
         fee: 0,
         tax: 0,
+        foreignCurrency: 'USD',
+        fxRate: 1.1337,
       });
     });
   });
@@ -202,6 +213,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Buy',
         date: '2020-11-18',
+        datetime: '2020-11-18T' + result.activities[0].datetime.substring(11),
         isin: 'US69608A1088',
         wkn: 'A2QA4J',
         company: 'PALANTIR TECHNOLOGIES INC',
@@ -216,6 +228,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Buy',
         date: '2020-11-12',
+        datetime: '2020-11-12T' + result.activities[0].datetime.substring(11),
         isin: 'US29786A1060',
         wkn: 'A14P98',
         company: 'ETSY INC. DL-,001',
@@ -232,6 +245,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Sell',
         date: '2020-11-04',
+        datetime: '2020-11-04T' + result.activities[0].datetime.substring(11),
         isin: 'DE000TT3W567',
         wkn: 'TT3W56',
         company: 'HSBC T+B TURBOP DAX',
@@ -246,6 +260,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Dividend',
         date: '2020-11-16',
+        datetime: '2020-11-16T' + result.activities[0].datetime.substring(11),
         isin: 'US0378331005',
         wkn: '865985',
         company: 'APPLE INC.',
@@ -262,6 +277,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Dividend',
         date: '2020-11-13',
+        datetime: '2020-11-13T' + result.activities[0].datetime.substring(11),
         isin: 'NL0010273215',
         wkn: 'A1J4U4',
         company: 'ASML HOLDING EO -,09',

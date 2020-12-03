@@ -1,10 +1,11 @@
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
 import Big from 'big.js';
 
-import { parseGermanNum, validateActivity } from '@/helper';
+import { parseGermanNum, validateActivity, createActivityDateTime } from '@/helper';
 
-// These functions are for single transaction documents
+//===========================
+// BLOCK 1
+// SINGLE TRANSACTIONS
+//===========================
 const findAmountBuy = textArr => {
   const amountIndex = textArr.findIndex(t => t.includes('IBAN')) - 1;
   return parseGermanNum(textArr[amountIndex]);
@@ -37,22 +38,14 @@ const findSharesDividend = textArr => {
   );
 };
 
-const findDateBuy = textArr => {
-  const date_string =
-    textArr[textArr.findIndex(t => t.includes('GESCHÄFTSABRECHNUNG')) + 2];
-  return format(parse(date_string, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd');
-};
+const findDateBuy = textArr =>
+  textArr[textArr.findIndex(t => t.includes('GESCHÄFTSABRECHNUNG')) + 2];
 
-const findDateDividend = textArr => {
-  const date_string = textArr[textArr.findIndex(t => t.includes('Valuta')) + 1];
-  return format(parse(date_string, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd');
-};
+const findDateDividend = textArr =>
+  textArr[textArr.findIndex(t => t.includes('Valuta')) + 1];
 
-const findDateForeignDividend = textArr => {
-  const date_string =
-    textArr[textArr.findIndex(t => t.includes('Information')) - 3];
-  return format(parse(date_string, 'dd.MM.yyyy', new Date()), 'yyyy-MM-dd');
-};
+const findDateForeignDividend = textArr =>
+  textArr[textArr.findIndex(t => t.includes('Information')) - 3];
 
 const findWknBuy = textArr => {
   const wknRoughIdx = textArr.indexOf('Wertpapierkennnummer');
@@ -110,7 +103,7 @@ const isForeignDividend = textArr =>
   textArr.some(t => t.includes('Ertragsgutschrift'));
 
 const parseSingleTransaction = textArr => {
-  let type, date, wkn, isin, company, shares, price, amount;
+  let type, date, wkn, isin, company, shares, price, amount, fxRate, foreignCurrency;
   let fee = 0;
   let tax = 0;
   let activity;
@@ -140,12 +133,23 @@ const parseSingleTransaction = textArr => {
     company = findCompanyForeignDividend(textArr);
     shares = +findSharesDividend(textArr);
     amount = findAmountForeignDividend(textArr);
+    const foreignCurrencyIndex = textArr.indexOf('Devisenkurs:')+1;
+    foreignCurrency = textArr[foreignCurrencyIndex].split('/')[1];
+    fxRate = parseGermanNum(textArr[foreignCurrencyIndex+1]);
     price = +Big(amount).div(shares);
   }
+  //sadly, no exact times can be extracted as they are not given
+  const [parsedDate, parsedDateTime] = createActivityDateTime(
+    date,
+    undefined,
+    'dd.MM.yyyy',
+    'dd.MM.yyyy HH:mm:ss'
+  );
   activity = {
     broker: 'commerzbank',
     type,
-    date,
+    date: parsedDate,
+    datetime: parsedDateTime,
     wkn,
     company,
     shares,
@@ -157,10 +161,18 @@ const parseSingleTransaction = textArr => {
   if (isin !== undefined) {
     activity.isin = isin;
   }
+  if (foreignCurrency !== undefined) {
+    activity.foreignCurrency = foreignCurrency;
+    activity.fxRate = fxRate;
+  }
   return validateActivity(activity);
 };
 
-// These functions are for transaction reports
+//===========================
+// BLOCK 2
+// TRANSACTION REPORTS
+//===========================
+
 const findPriorIndex = (arr, idx, keyArr = ['STK', '/ Sperre']) => {
   let backwardIdx = 1;
   while (idx - backwardIdx >= 0) {
@@ -183,12 +195,22 @@ const parseBuySellTransaction = (pdfPage, pageIdx, type) => {
   const txStart = findPriorIndex(pdfPage, pageIdx) + 1;
   const txEndIdx = pdfPage.indexOf('STK', pageIdx);
   const priceSplitOffset = pdfPage[pageIdx - 1].includes(' ') ? 0 : 1;
+  const fxOffset = txEndIdx - pageIdx > 7 ? 1 : 0;
+  const [parsedDate, parsedDateTime] = createActivityDateTime(
+    pdfPage[pageIdx + 6 + fxOffset],
+    undefined,
+    'dd.MM.yyyy',
+    'dd.MM.yyyy HH:mm:ss'
+  );
   let activity = {
     broker: 'commerzbank',
     type: type,
+    date: parsedDate,
+    datetime: parsedDateTime,
     company: pdfPage.slice(txStart, pageIdx - 2 - priceSplitOffset).join(' '),
     wkn: pdfPage[pageIdx + 2],
     isin: pdfPage[pageIdx + 3].split(' ')[1],
+    shares: Math.abs(parseGermanNum(pdfPage[pageIdx + 5 + fxOffset])),
     amount: Math.abs(parseGermanNum(pdfPage[pageIdx - 2 - priceSplitOffset])),
     price: Math.abs(parseGermanNum(pdfPage[pageIdx - 1 - priceSplitOffset])),
     fee: 0,
@@ -203,8 +225,7 @@ const parseBuySellTransaction = (pdfPage, pageIdx, type) => {
   } else if (type === 'Sell') {
     activity.tax = +Big(activity.amount).minus(payedAmount).abs();
   }
-
-  if (txEndIdx - pageIdx > 7) {
+  if (fxOffset === 1) {
     activity.foreignCurrency =
       priceSplitOffset === 0
         ? pdfPage[pageIdx - 1].split(' ')[1]
@@ -212,18 +233,54 @@ const parseBuySellTransaction = (pdfPage, pageIdx, type) => {
     activity.fxRate = parseGermanNum(pdfPage[pageIdx + 5]);
     activity.price = +Big(activity.price).div(activity.fxRate);
   }
-  const fxOffset = activity.fxRate === undefined ? 0 : 1;
-  activity.shares = Math.abs(parseGermanNum(pdfPage[pageIdx + 5 + fxOffset]));
-  activity.date = format(
-    parse(pdfPage[pageIdx + 6 + fxOffset], 'dd.MM.yyyy', new Date()),
-    'yyyy-MM-dd'
-  );
-  if (type === 'Sell') {
-    return activity;
-  }
   return activity;
 };
 
+const parseDividendTransaction = (pdfPage, pageIdx) => {
+  const txEndIdx = pdfPage.indexOf('STK', pageIdx);
+  const txStart = findPriorIndex(pdfPage, pageIdx) + 1;
+  const priceSplitOffset = pdfPage[pageIdx - 1].includes(' ') ? 0 : 1;
+
+  // If the activity is this long, it is because of foreign currency information
+  const fxOffset = txEndIdx - pageIdx > 7 ? 1 : 0;
+  const [parsedDate, parsedDateTime] = createActivityDateTime(
+    pdfPage[pageIdx + 6 + fxOffset],
+    undefined,
+    'dd.MM.yyyy',
+    'dd.MM.yyyy HH:mm:ss'
+  );
+
+  let activity = {
+    broker: 'commerzbank',
+    type: 'Dividend',
+    date: parsedDate,
+    datetime: parsedDateTime,
+    company: pdfPage.slice(txStart, pageIdx - 1 - priceSplitOffset).join(' '),
+    wkn: pdfPage[pageIdx + 2],
+    isin: pdfPage[pageIdx + 3].split(' ')[1],
+    shares: Math.abs(parseGermanNum(pdfPage[pageIdx + 5 + fxOffset])),
+    price: Math.abs(parseGermanNum(pdfPage[pageIdx - 1 - priceSplitOffset])),
+    fee: 0,
+  };
+
+  if (fxOffset === 1) {
+    activity.foreignCurrency =
+      priceSplitOffset === 0
+        ? pdfPage[pageIdx - 1].split(' ')[1]
+        : pdfPage[pageIdx - 1];
+    activity.fxRate = parseGermanNum(pdfPage[pageIdx + 5]);
+    activity.price = +Big(activity.price).div(activity.fxRate);
+  }
+
+  activity.amount = +Big(activity.shares).times(activity.price);
+  const postTaxAmount = Math.abs(parseGermanNum(pdfPage[pageIdx + 4]));
+  // It is unknown from the .pdf file why the net amount and payed out amount
+  // diverge, most likely reason is tax:
+  activity.tax = +Big(activity.amount).minus(postTaxAmount);
+  return activity;
+};
+
+// This is not yet implemented in the T1 backend and can be commented out as soon as it is.
 /* const parseTxInOutTransaction = (pdfPage, pageIdx, type) => {
 
   const txStart = findPriorIndex(pdfPage, pageIdx)+1;
@@ -240,42 +297,6 @@ const parseBuySellTransaction = (pdfPage, pageIdx, type) => {
     fee: 0,
   }
 } */
-
-const parseDividendTransaction = (pdfPage, pageIdx) => {
-  const txEndIdx = pdfPage.indexOf('STK', pageIdx);
-  const txStart = findPriorIndex(pdfPage, pageIdx) + 1;
-  const priceSplitOffset = pdfPage[pageIdx - 1].includes(' ') ? 0 : 1;
-
-  let activity = {
-    broker: 'commerzbank',
-    type: 'Dividend',
-    company: pdfPage.slice(txStart, pageIdx - 1 - priceSplitOffset).join(' '),
-    wkn: pdfPage[pageIdx + 2],
-    isin: pdfPage[pageIdx + 3].split(' ')[1],
-    price: Math.abs(parseGermanNum(pdfPage[pageIdx - 1 - priceSplitOffset])),
-    fee: 0,
-  };
-  if (txEndIdx - pageIdx > 7) {
-    activity.foreignCurrency =
-      priceSplitOffset === 0
-        ? pdfPage[pageIdx - 1].split(' ')[1]
-        : pdfPage[pageIdx - 1];
-    activity.fxRate = parseGermanNum(pdfPage[pageIdx + 5]);
-    activity.price = +Big(activity.price).div(activity.fxRate);
-  }
-  const fxOffset = activity.fxRate === undefined ? 0 : 1;
-  activity.date = format(
-    parse(pdfPage[pageIdx + 6 + fxOffset], 'dd.MM.yyyy', new Date()),
-    'yyyy-MM-dd'
-  );
-  activity.shares = Math.abs(parseGermanNum(pdfPage[pageIdx + 5 + fxOffset]));
-  activity.amount = +Big(activity.shares).times(activity.price);
-  const postTaxAmount = Math.abs(parseGermanNum(pdfPage[pageIdx + 4]));
-  // It is unknown from the .pdf file why the net amount and payed out amount
-  // diverge, most likely reason is tax:
-  activity.tax = +Big(activity.amount).minus(postTaxAmount);
-  return activity;
-};
 
 const parseTransactionReport = pdfPages => {
   let actions = [];
@@ -308,7 +329,10 @@ const parseTransactionReport = pdfPages => {
   return actions;
 };
 
-// General parsing functions
+//===========================
+// BLOCK 3
+// GENERAL PARSING FUNCTIONS
+//===========================
 export const canParsePage = (content, extension) => {
   // The first PDF Page does not always contain "Commerzbank", thus this ugly
   // workaround. e. G. dividend_IE00B3RBWM25_1.json
