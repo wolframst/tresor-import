@@ -1,6 +1,10 @@
 import Big from 'big.js';
 
-import { parseGermanNum, validateActivity, createActivityDateTime } from '@/helper';
+import {
+  parseGermanNum,
+  validateActivity,
+  createActivityDateTime,
+} from '@/helper';
 
 //===========================
 // BLOCK 1
@@ -103,7 +107,16 @@ const isForeignDividend = textArr =>
   textArr.some(t => t.includes('Ertragsgutschrift'));
 
 const parseSingleTransaction = textArr => {
-  let type, date, wkn, isin, company, shares, price, amount, fxRate, foreignCurrency;
+  let type,
+    date,
+    wkn,
+    isin,
+    company,
+    shares,
+    price,
+    amount,
+    fxRate,
+    foreignCurrency;
   let fee = 0;
   let tax = 0;
   let activity;
@@ -133,9 +146,9 @@ const parseSingleTransaction = textArr => {
     company = findCompanyForeignDividend(textArr);
     shares = +findSharesDividend(textArr);
     amount = findAmountForeignDividend(textArr);
-    const foreignCurrencyIndex = textArr.indexOf('Devisenkurs:')+1;
+    const foreignCurrencyIndex = textArr.indexOf('Devisenkurs:') + 1;
     foreignCurrency = textArr[foreignCurrencyIndex].split('/')[1];
-    fxRate = parseGermanNum(textArr[foreignCurrencyIndex+1]);
+    fxRate = parseGermanNum(textArr[foreignCurrencyIndex + 1]);
     price = +Big(amount).div(shares);
   }
   //sadly, no exact times can be extracted as they are not given

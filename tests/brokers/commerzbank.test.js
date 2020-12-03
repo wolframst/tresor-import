@@ -168,7 +168,7 @@ describe('Broker: commerzbank', () => {
         broker: 'commerzbank',
         type: 'Dividend',
         date: '2020-06-26',
-        datetime: "2020-06-26T" + result.activities[0].datetime.substring(11),
+        datetime: '2020-06-26T' + result.activities[0].datetime.substring(11),
         isin: 'IE00B8GKDB10',
         wkn: 'A1T8FV',
         company: 'VA.FTSE A.W.H.D.Y.UETFDLD',
