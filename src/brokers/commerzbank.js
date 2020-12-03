@@ -11,18 +11,18 @@ import {
 // SINGLE TRANSACTIONS
 //===========================
 const findAmountBuy = textArr => {
-  const amountIndex = textArr.findIndex(t => t.includes('IBAN')) - 1;
-  return parseGermanNum(textArr[amountIndex]);
+  const amountIdx = textArr.findIndex(t => t.includes('Kurswert'));
+  return parseGermanNum(textArr[amountIdx+3]);
 };
 
-const findAmountDividend = textArr => {
-  const amountIndex =
-    textArr.findIndex(t => t.includes('Steuerbemessungsgrundlage')) - 1;
-  return parseGermanNum(textArr[amountIndex]);
-};
-
-const findAmountForeignDividend = textArr => {
-  const amountIndex = textArr.findIndex(t => t.includes('Devisenkurs:')) + 4;
+const findAmountDividend = ( textArr, foreignDividend )=> {
+  let amountIndex;
+  if ( foreignDividend ) {
+    amountIndex = textArr.findIndex(t => t.includes('Devisenkurs:')) + 4;
+  }
+  else {
+    amountIndex = textArr.findIndex(t => t.includes('Steuerbemessungsgrundlage')) - 1;
+  }
   return parseGermanNum(textArr[amountIndex]);
 };
 
@@ -33,23 +33,21 @@ const findSharesBuy = textArr => {
 };
 
 const findSharesDividend = textArr => {
-  return Big(
-    parseGermanNum(
-      textArr[
-        textArr.findIndex(t => t.includes('Stk.') || t.includes('STK')) + 1
-      ]
-    )
-  );
+  return parseGermanNum(
+    textArr[
+      textArr.findIndex(t => t.includes('Stk.') || t.includes('STK')) + 1
+  ]);
 };
 
 const findDateBuy = textArr =>
-  textArr[textArr.findIndex(t => t.includes('GESCHÄFTSABRECHNUNG')) + 2];
+  textArr[textArr.findIndex(t => t.includes('Geschäftstag')) + 2];
 
-const findDateDividend = textArr =>
-  textArr[textArr.findIndex(t => t.includes('Valuta')) + 1];
-
-const findDateForeignDividend = textArr =>
-  textArr[textArr.findIndex(t => t.includes('Information')) - 3];
+const findDateDividend = ( textArr, foreignDividend = false) => {
+  if ( foreignDividend ) {
+    return textArr[textArr.findIndex(t => t.includes('Information')) - 3];
+  }
+  return textArr[textArr.findIndex(t => t.includes('Valuta')) + 1];
+};
 
 const findWknBuy = textArr => {
   const wknRoughIdx = textArr.indexOf('Wertpapierkennnummer');
@@ -60,19 +58,32 @@ const findWknBuy = textArr => {
 const findWknDividend = textArr =>
   textArr[textArr.findIndex(t => t.includes('WKN')) + 3];
 
-const findWknForeignDividend = textArr =>
-  textArr[textArr.findIndex(t => t.includes('WKN/ISIN')) + 3];
+const findIsinDividend = ( textArr, foreignDividend ) => {
+  let isinIdx;
+  if ( foreignDividend ) {
+    isinIdx = textArr.findIndex(t => t.includes('STK')) + 2;
+  } else {
+    isinIdx = textArr.findIndex(t => t.includes('ISIN')) + 3;
+  }
+  return textArr[isinIdx];
+}
 
-const findIsinDividend = textArr =>
-  textArr[textArr.findIndex(t => t.includes('ISIN')) + 3];
+const findPriceBuy = ( textArr ) => {
+  const priceIdx = textArr.findIndex(t => t.includes('Kurswert')) - 1;
+  return parseGermanNum(textArr[priceIdx]);
+};
 
-const findIsinForeignDividend = textArr =>
-  textArr[textArr.findIndex(t => t.includes('STK')) + 2];
+const findFeeBuy = ( textArr, amount ) => {
+  const payedAmountIdx = textArr.findIndex(t => t.includes('Valuta'))+15
+  return +Big(parseGermanNum(textArr[payedAmountIdx])).minus(amount);
+};
 
 const findTaxDividend = textArr => {
-  // Foreign Payouts need to be treated differently
-  const index = textArr.findIndex(t => t.includes('abgeführte')) + 3;
-  return Big(Math.abs(parseGermanNum(textArr[index])));
+  const taxIndex = textArr.findIndex(t => t.includes('abgeführte'));
+  if ( taxIndex >= 0) {
+    return Math.abs(parseGermanNum(textArr[taxIndex + 3]));
+  }
+  return 0
 };
 
 const findCompanyBuy = textArr => {
@@ -86,25 +97,23 @@ const findCompanyBuy = textArr => {
     .join(' ');
 };
 
-const findCompanyDividend = textArr => {
+const findCompanyDividend = ( textArr, foreignDividend = false) => {
+  if ( foreignDividend ) {
+    const startCompanyName = textArr.findIndex(t => t.includes('WKN/ISIN')) + 4;
+    const endCompanyName = textArr.findIndex(t => t.includes('STK')) - 1;
+    return textArr.slice(startCompanyName, endCompanyName + 1).join(' ');
+  }
   const startCompanyName =
     textArr.findIndex(t => t.includes('Investment-Ausschüttung')) + 5;
   return textArr.slice(startCompanyName, startCompanyName + 2).join(' ');
 };
 
-const findCompanyForeignDividend = textArr => {
-  const startCompanyName = textArr.findIndex(t => t.includes('WKN/ISIN')) + 4;
-  const endCompanyName = textArr.findIndex(t => t.includes('STK')) - 1;
-  return textArr.slice(startCompanyName, endCompanyName + 1).join(' ');
-};
-
 const isBuy = textArr => textArr.some(t => t.includes('Wertpapierkauf'));
 
 const isDividend = textArr =>
-  textArr.some(t => t.includes('Investment-Ausschüttung'));
-
-const isForeignDividend = textArr =>
-  textArr.some(t => t.includes('Ertragsgutschrift'));
+  textArr.some(t =>
+    t === 'Investment-Ausschüttung' ||
+    t === 'Ertragsgutschrift');
 
 const parseSingleTransaction = textArr => {
   let type,
@@ -127,31 +136,28 @@ const parseSingleTransaction = textArr => {
     company = findCompanyBuy(textArr);
     shares = +findSharesBuy(textArr);
     amount = findAmountBuy(textArr);
-    price = +Big(amount).div(shares);
-  } else if (isDividend(textArr)) {
-    type = 'Dividend';
-    date = findDateDividend(textArr);
-    wkn = findWknDividend(textArr);
-    isin = findIsinDividend(textArr);
-    company = findCompanyDividend(textArr);
-    shares = +findSharesDividend(textArr);
-    amount = findAmountDividend(textArr);
-    price = +Big(amount).div(shares);
-    tax = +findTaxDividend(textArr);
-  } else if (isForeignDividend(textArr)) {
-    type = 'Dividend';
-    date = findDateForeignDividend(textArr);
-    wkn = findWknForeignDividend(textArr);
-    isin = findIsinForeignDividend(textArr);
-    company = findCompanyForeignDividend(textArr);
-    shares = +findSharesDividend(textArr);
-    amount = findAmountForeignDividend(textArr);
-    const foreignCurrencyIndex = textArr.indexOf('Devisenkurs:') + 1;
-    foreignCurrency = textArr[foreignCurrencyIndex].split('/')[1];
-    fxRate = parseGermanNum(textArr[foreignCurrencyIndex + 1]);
-    price = +Big(amount).div(shares);
+    price = findPriceBuy(textArr);
+    fee = findFeeBuy(textArr, amount);
   }
-  //sadly, no exact times can be extracted as they are not given
+  else if (isDividend(textArr)) {
+    const foreignCurrencyIndex = textArr.indexOf('Devisenkurs:');
+    const foreignDividend = foreignCurrencyIndex >= 0;
+    type = 'Dividend';
+    date = findDateDividend(textArr, foreignDividend);
+    wkn = findWknDividend(textArr);
+    isin = findIsinDividend(textArr, foreignDividend);
+    company = findCompanyDividend(textArr, foreignDividend);
+    shares = findSharesDividend(textArr);
+    amount = findAmountDividend(textArr, foreignDividend);
+    price = +Big(amount).div(shares);
+    tax = findTaxDividend(textArr);
+    if (foreignCurrencyIndex >= 0) {
+      foreignCurrency = textArr[foreignCurrencyIndex + 1].split('/')[1];
+      fxRate = parseGermanNum(textArr[foreignCurrencyIndex + 2]);
+    }
+  }
+  // sadly, no exact times can be extracted as they are not given in any of the
+  // files
   const [parsedDate, parsedDateTime] = createActivityDateTime(
     date,
     undefined,
@@ -359,7 +365,7 @@ export const canParsePage = (content, extension) => {
       joinedContent.includes(
         'SteuerlicheBehandlung:AusländischeInvestment-Ausschüttung'
       )) &&
-      (isBuy(content) || isForeignDividend(content) || isDividend(content))) ||
+      (isBuy(content) || isDividend(content))) ||
       isTransactionReport(content))
   );
 };
