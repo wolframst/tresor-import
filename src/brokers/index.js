@@ -3,6 +3,7 @@ import * as baaderBank from './baaderBank';
 import * as comdirect from './comdirect';
 import * as commerzbank from './commerzbank';
 import * as consorsbank from './consorsbank';
+import * as cortalconsors from './cortalconsors';
 import * as degiro from './degiro.js';
 import * as dkb from './dkb';
 import * as ebase from './ebase';
@@ -21,6 +22,7 @@ export {
   comdirect,
   commerzbank,
   consorsbank,
+  cortalconsors,
   degiro,
   dkb,
   ebase,
