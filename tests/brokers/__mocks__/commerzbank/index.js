@@ -5,6 +5,8 @@ export const buySamples = [
   require('./buy/buy_mixed_A1JX52_1.json'),
   require('./buy/buy_mixed_A1JX52_2.json'),
   require('./buy/buy_mixed_A1T8FV_1.json'),
+  require('./buy/savings_plan_eur_2020_agif_all.json'),
+  require('./buy/buy_mixed_comstage_msci_world.json'),
 ];
 
 export const dividendSamples = [
