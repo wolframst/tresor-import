@@ -156,12 +156,7 @@ const parseSingleTransaction = textArr => {
   }
   // sadly, no exact times can be extracted as they are not given in any of the
   // files
-  const [parsedDate, parsedDateTime] = createActivityDateTime(
-    date,
-    undefined,
-    'dd.MM.yyyy',
-    'dd.MM.yyyy HH:mm:ss'
-  );
+  const [parsedDate, parsedDateTime] = createActivityDateTime(date, undefined);
   activity = {
     broker: 'commerzbank',
     type,
@@ -213,12 +208,7 @@ const parseBuySellTransaction = (pdfPage, pageIdx, type) => {
   const txEndIdx = pdfPage.indexOf('STK', pageIdx);
   const priceSplitOffset = pdfPage[pageIdx - 1].includes(' ') ? 0 : 1;
   const fxOffset = txEndIdx - pageIdx > 7 ? 1 : 0;
-  const [parsedDate, parsedDateTime] = createActivityDateTime(
-    pdfPage[pageIdx + 6 + fxOffset],
-    undefined,
-    'dd.MM.yyyy',
-    'dd.MM.yyyy HH:mm:ss'
-  );
+  const [parsedDate, parsedDateTime] = createActivityDateTime(pdfPage[pageIdx + 6 + fxOffset],  undefined);
   let activity = {
     broker: 'commerzbank',
     type: type,
@@ -260,12 +250,7 @@ const parseDividendTransaction = (pdfPage, pageIdx) => {
 
   // If the activity is this long, it is because of foreign currency information
   const fxOffset = txEndIdx - pageIdx > 7 ? 1 : 0;
-  const [parsedDate, parsedDateTime] = createActivityDateTime(
-    pdfPage[pageIdx + 6 + fxOffset],
-    undefined,
-    'dd.MM.yyyy',
-    'dd.MM.yyyy HH:mm:ss'
-  );
+  const [parsedDate, parsedDateTime] = createActivityDateTime(pdfPage[pageIdx + 6 + fxOffset], undefined);
 
   let activity = {
     broker: 'commerzbank',
