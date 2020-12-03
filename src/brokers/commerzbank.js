@@ -12,16 +12,16 @@ import {
 //===========================
 const findAmountBuy = textArr => {
   const amountIdx = textArr.findIndex(t => t.includes('Kurswert'));
-  return parseGermanNum(textArr[amountIdx+3]);
+  return parseGermanNum(textArr[amountIdx + 3]);
 };
 
-const findAmountDividend = ( textArr, foreignDividend )=> {
+const findAmountDividend = (textArr, foreignDividend) => {
   let amountIndex;
-  if ( foreignDividend ) {
+  if (foreignDividend) {
     amountIndex = textArr.findIndex(t => t.includes('Devisenkurs:')) + 4;
-  }
-  else {
-    amountIndex = textArr.findIndex(t => t.includes('Steuerbemessungsgrundlage')) - 1;
+  } else {
+    amountIndex =
+      textArr.findIndex(t => t.includes('Steuerbemessungsgrundlage')) - 1;
   }
   return parseGermanNum(textArr[amountIndex]);
 };
@@ -34,16 +34,15 @@ const findSharesBuy = textArr => {
 
 const findSharesDividend = textArr => {
   return parseGermanNum(
-    textArr[
-      textArr.findIndex(t => t.includes('Stk.') || t.includes('STK')) + 1
-  ]);
+    textArr[textArr.findIndex(t => t.includes('Stk.') || t.includes('STK')) + 1]
+  );
 };
 
 const findDateBuy = textArr =>
   textArr[textArr.findIndex(t => t.includes('Geschäftstag')) + 2];
 
-const findDateDividend = ( textArr, foreignDividend = false) => {
-  if ( foreignDividend ) {
+const findDateDividend = (textArr, foreignDividend = false) => {
+  if (foreignDividend) {
     return textArr[textArr.findIndex(t => t.includes('Information')) - 3];
   }
   return textArr[textArr.findIndex(t => t.includes('Valuta')) + 1];
@@ -58,32 +57,32 @@ const findWknBuy = textArr => {
 const findWknDividend = textArr =>
   textArr[textArr.findIndex(t => t.includes('WKN')) + 3];
 
-const findIsinDividend = ( textArr, foreignDividend ) => {
+const findIsinDividend = (textArr, foreignDividend) => {
   let isinIdx;
-  if ( foreignDividend ) {
+  if (foreignDividend) {
     isinIdx = textArr.findIndex(t => t.includes('STK')) + 2;
   } else {
     isinIdx = textArr.findIndex(t => t.includes('ISIN')) + 3;
   }
   return textArr[isinIdx];
-}
+};
 
-const findPriceBuy = ( textArr ) => {
+const findPriceBuy = textArr => {
   const priceIdx = textArr.findIndex(t => t.includes('Kurswert')) - 1;
   return parseGermanNum(textArr[priceIdx]);
 };
 
-const findFeeBuy = ( textArr, amount ) => {
-  const payedAmountIdx = textArr.findIndex(t => t.includes('Valuta'))+15
+const findFeeBuy = (textArr, amount) => {
+  const payedAmountIdx = textArr.findIndex(t => t.includes('Valuta')) + 15;
   return +Big(parseGermanNum(textArr[payedAmountIdx])).minus(amount);
 };
 
 const findTaxDividend = textArr => {
   const taxIndex = textArr.findIndex(t => t.includes('abgeführte'));
-  if ( taxIndex >= 0) {
+  if (taxIndex >= 0) {
     return Math.abs(parseGermanNum(textArr[taxIndex + 3]));
   }
-  return 0
+  return 0;
 };
 
 const findCompanyBuy = textArr => {
@@ -97,8 +96,8 @@ const findCompanyBuy = textArr => {
     .join(' ');
 };
 
-const findCompanyDividend = ( textArr, foreignDividend = false) => {
-  if ( foreignDividend ) {
+const findCompanyDividend = (textArr, foreignDividend = false) => {
+  if (foreignDividend) {
     const startCompanyName = textArr.findIndex(t => t.includes('WKN/ISIN')) + 4;
     const endCompanyName = textArr.findIndex(t => t.includes('STK')) - 1;
     return textArr.slice(startCompanyName, endCompanyName + 1).join(' ');
@@ -111,9 +110,9 @@ const findCompanyDividend = ( textArr, foreignDividend = false) => {
 const isBuy = textArr => textArr.some(t => t.includes('Wertpapierkauf'));
 
 const isDividend = textArr =>
-  textArr.some(t =>
-    t === 'Investment-Ausschüttung' ||
-    t === 'Ertragsgutschrift');
+  textArr.some(
+    t => t === 'Investment-Ausschüttung' || t === 'Ertragsgutschrift'
+  );
 
 const parseSingleTransaction = textArr => {
   let type,
@@ -138,8 +137,7 @@ const parseSingleTransaction = textArr => {
     amount = findAmountBuy(textArr);
     price = findPriceBuy(textArr);
     fee = findFeeBuy(textArr, amount);
-  }
-  else if (isDividend(textArr)) {
+  } else if (isDividend(textArr)) {
     const foreignCurrencyIndex = textArr.indexOf('Devisenkurs:');
     const foreignDividend = foreignCurrencyIndex >= 0;
     type = 'Dividend';

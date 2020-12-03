@@ -175,9 +175,8 @@ describe('Broker: commerzbank', () => {
     });
   });
 
-
   describe('Validate dividends', () => {
-    test('Can the dividend for IE00B3RBWM25_1 be parsed correctly', () => {
+    test('Can the dividend for IE00B3RBWM25_1 be parsed', () => {
       const result = commerzbank.parsePages(dividendSamples[0]);
 
       expect(result.activities.length).toEqual(1);
@@ -197,7 +196,7 @@ describe('Broker: commerzbank', () => {
       });
     });
 
-    test('Can the dividend for IE00B8GKDB10_2 be parsed correctly', () => {
+    test('Can the dividend for IE00B8GKDB10_2 be parsed', () => {
       const result = commerzbank.parsePages(dividendSamples[5]);
 
       expect(result.activities.length).toEqual(1);
@@ -217,7 +216,7 @@ describe('Broker: commerzbank', () => {
       });
     });
 
-    test('Can the foreign dividend for IE00B3RBWM25_1 in another currency be parsed correctly', () => {
+    test('Can the foreign dividend for IE00B3RBWM25_1 be parsed', () => {
       const result = commerzbank.parsePages(dividendSamples[6]);
 
       expect(result.activities.length).toEqual(1);
@@ -236,6 +235,28 @@ describe('Broker: commerzbank', () => {
         tax: 0,
         foreignCurrency: 'USD',
         fxRate: 1.1337,
+      });
+    });
+
+    test('Can the foreign dividend for IE00B8GKDB10_2 be parsed', () => {
+      const result = commerzbank.parsePages(dividendSamples[11]);
+
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'commerzbank',
+        type: 'Dividend',
+        date: '2020-04-14',
+        datetime: '2020-04-14T' + result.activities[0].datetime.substring(11),
+        isin: 'IE00B8GKDB10',
+        wkn: 'A1T8FV',
+        company: 'Vang.FTSE A.-Wo.Hi.Di.Yi.U.ETF',
+        shares: 60.986,
+        price: 0.3658216639884564,
+        amount: 22.31,
+        fee: 0,
+        tax: 0,
+        foreignCurrency: 'USD',
+        fxRate: 1.0901,
       });
     });
   });
