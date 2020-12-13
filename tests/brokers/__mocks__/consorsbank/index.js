@@ -5,6 +5,9 @@ export const buySamples = [
   require('./buy/buy4.json'),
   require('./buy/buyOld.json'),
   require('./buy/buy_2015_ishs.json'),
+  require('./buy/2020_limit_buy.json'),
+  require('./buy/2020_fund.json'),
+  require('./buy/2020_fund_without_issue.json'),
 ];
 
 export const sellSamples = [

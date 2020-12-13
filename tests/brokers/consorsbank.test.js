@@ -155,6 +155,69 @@ describe('Broker: Consorsbank', () => {
         },
       ]);
     });
+
+    test('should map pdf data of limit buy sample from 2020', () => {
+      const activity = consorsbank.parsePages(buySamples[6]).activities;
+
+      expect(activity).toEqual([
+        {
+          broker: 'consorsbank',
+          type: 'Buy',
+          company: 'ADOBE INC.',
+          date: '2020-12-09',
+          datetime: '2020-12-09T20:18:29.000Z',
+          isin: 'US00724F1012',
+          wkn: '871981',
+          price: 400,
+          shares: 7,
+          amount: 2800,
+          tax: 0,
+          fee: 11.95,
+        },
+      ]);
+    });
+
+    test('should map pdf data of fund buy sample from 2020', () => {
+      const activity = consorsbank.parsePages(buySamples[7]).activities;
+
+      expect(activity).toEqual([
+        {
+          broker: 'consorsbank',
+          type: 'Buy',
+          company: 'DWS IN.-AR.INT. LCEOA',
+          date: '2020-11-17',
+          datetime: '2020-11-17T09:51:08.000Z',
+          isin: 'LU1863263346',
+          wkn: 'DWS2W9',
+          price: 152.42892587291965,
+          shares: 1.60009,
+          amount: 243.9,
+          tax: 0,
+          fee: 6.1,
+        },
+      ]);
+    });
+
+    test('should map pdf data of fund (without issue) buy sample from 2020', () => {
+      const activity = consorsbank.parsePages(buySamples[8]).activities;
+
+      expect(activity).toEqual([
+        {
+          broker: 'consorsbank',
+          type: 'Buy',
+          company: 'DWS IN.-AR.INT. LCEOA',
+          date: '2020-09-16',
+          datetime: '2020-09-16T06:24:08.000Z',
+          isin: 'LU1863263346',
+          wkn: 'DWS2W9',
+          price: 143.31000246493204,
+          shares: 1.74447,
+          amount: 250,
+          tax: 0,
+          fee: 0,
+        },
+      ]);
+    });
   });
 
   describe('Sell', () => {

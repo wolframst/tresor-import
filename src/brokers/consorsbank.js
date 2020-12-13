@@ -53,7 +53,19 @@ const findBuySellLineNumber = content => {
 
 const findDateBuySell = content => {
   // Before 12/2015 the headline is 'Wertpapierabrechnung'
-  return content[findBuySellLineNumber(content) + 2].substr(3, 10).trim();
+  const lineNumber = findBuySellLineNumber(content);
+  if (lineNumber <= 0) {
+    return undefined;
+  }
+
+  let offset = 0;
+  let substrFrom = 3;
+  if (content[lineNumber + 2].toLowerCase() === 'am') {
+    offset = 1;
+    substrFrom = 0;
+  }
+
+  return content[lineNumber + 2 + offset].substr(substrFrom).trim();
 };
 
 const findOrderTime = content => {
@@ -63,7 +75,8 @@ const findOrderTime = content => {
     return undefined;
   }
 
-  const lineContent = content[lineNumber + 4];
+  const offset = content[lineNumber + 2].toLowerCase() !== 'am' ? 0 : 1;
+  const lineContent = content[lineNumber + 4 + offset];
   if (lineContent === undefined || !timeRegex(true).test(lineContent)) {
     return undefined;
   }
@@ -108,17 +121,33 @@ const findDividendShares = textArr => {
 };
 
 const findAmount = (textArr, type) => {
-  let amount, idx;
-
   if (type === 'Buy' || type === 'Sell') {
-    idx = textArr.indexOf('Kurswert');
-    // Documents before 12/2015 have an empty line after 'Kurswert'
-    const hasEmptyLineAfterAmountLabel = textArr[idx + 1] === '';
-    amount = hasEmptyLineAfterAmountLabel ? textArr[idx + 3] : textArr[idx + 2];
-  } else if (type === 'Dividend') {
+    let lineNumber = textArr.indexOf('Kurswert');
+    if (lineNumber <= 0) {
+      lineNumber = textArr.indexOf('Nettoinventarwert');
+    }
+
+    let offset = 0;
+    if (textArr[lineNumber + 1] === '') {
+      // Documents before 12/2015 have an empty line after 'Kurswert'
+      offset += 1;
+    }
+
+    if (/^[A-Z]{3}$/.test(textArr[lineNumber + 1 + offset])) {
+      // Documents before nov 2020 have the currency in a line before the amount.
+      offset += 1;
+    }
+
+    return parseGermanNum(textArr[lineNumber + 1 + offset]);
+  }
+
+  if (type === 'Dividend') {
+    let amount, idx;
+
     const oldDividendFile = textArr.some(
       line => line.includes('IBAN') && line !== 'IBAN'
     );
+
     if (!oldDividendFile) {
       // "Brutto in EUR" is only present if the dividend is paid in a foreign currency, otherwise its just "Brutto"
       idx = textArr.indexOf('Brutto in EUR');
@@ -134,21 +163,50 @@ const findAmount = (textArr, type) => {
         amount = textArr[idx].split(/\s+/)[2];
       }
     }
+
+    return parseGermanNum(amount);
   }
-  return parseGermanNum(amount);
 };
 
-const findFee = textArr => {
-  const brokerageIdx = textArr.findIndex(t => t.toLowerCase() === 'provision');
-  const brokerage = brokerageIdx >= 0 ? textArr[brokerageIdx + 2] : null;
-  const baseFeeIdx = textArr.findIndex(t => t.toLowerCase() === 'grundgebühr');
-  const baseFee = baseFeeIdx >= 0 ? textArr[baseFeeIdx + 2] : null;
-
-  const sum = +Big(parseGermanNum(brokerage)).plus(
-    Big(parseGermanNum(baseFee))
+const getNumberAfterTermWithOffset = (content, termToLower, offset = 0) => {
+  const lineNumber = content.findIndex(line =>
+    line.toLowerCase().includes(termToLower)
   );
 
-  return Math.abs(sum);
+  if (lineNumber <= 0) {
+    return undefined;
+  }
+
+  if (/^[A-Z]{3}$/.test(content[lineNumber + offset + 1])) {
+    // Documents before nov 2020 have the price after the currency line.
+    return parseGermanNum(content[lineNumber + offset + 2]);
+  }
+
+  return parseGermanNum(content[lineNumber + offset + 1]);
+};
+
+const findFee = content => {
+  const feeBrokerage = getNumberAfterTermWithOffset(content, 'provision');
+  const feeBase = getNumberAfterTermWithOffset(content, 'grundgebühr');
+  let feeIssue = 0;
+  if (content.indexOf('Ausgabegebühr 0,00%') <= 0) {
+    feeIssue = getNumberAfterTermWithOffset(content, 'ausgabegebühr');
+  }
+
+  let totalFee = Big(0);
+  if (feeBrokerage !== undefined) {
+    totalFee = totalFee.plus(feeBrokerage);
+  }
+
+  if (feeBase !== undefined) {
+    totalFee = totalFee.plus(feeBase);
+  }
+
+  if (feeIssue !== undefined) {
+    totalFee = totalFee.plus(feeIssue);
+  }
+
+  return +totalFee;
 };
 
 const findTax = textArr => {
