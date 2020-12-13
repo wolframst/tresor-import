@@ -3,7 +3,6 @@ import {
   parseGermanNum,
   validateActivity,
   createActivityDateTime,
-  timeRegex,
 } from '@/helper';
 
 const getValueByPreviousElement = (textArr, prev, range) => {
@@ -48,19 +47,17 @@ const findISIN = textArr => {
 const findCompany = textArr =>
   getValueByPreviousElement(textArr, 'Wertpapierbezeichnung', 1).split(' -')[0];
 
-const findDate = textArr =>
-  isBuy(textArr) || isSell(textArr)
-    ? getValueByPreviousElement(textArr, 'Ausführungstag', 2).split(' ')[0]
-    : getValueByPreviousElement(textArr, 'Zahltag', 1);
-
-const findOrderTime = content => {
-  // Extract the time after the line with order time which contains "um 17:22:22 Uhr"
-  const lineContent = getValueByPreviousElement(content, 'Ausführungstag', 3);
-  if (lineContent === undefined || !timeRegex(true).test(lineContent)) {
-    return undefined;
+const findDateTime = textArr => {
+  if (isBuy(textArr) || isSell(textArr)) {
+    const dateIdx = textArr.findIndex(t => t.includes('Ausführungstag'));
+    if (textArr[dateIdx + 1] === '/ -zeit') {
+      return [textArr[dateIdx + 2], textArr[dateIdx + 3].split(' ')[1]];
+    } else {
+      return [textArr[dateIdx + 1], undefined];
+    }
+  } else if (isDividend(textArr)) {
+    return [getValueByPreviousElement(textArr, 'Zahltag', 1), undefined];
   }
-
-  return lineContent.trim().split(' ')[1];
 };
 
 const findPrice = content => {
@@ -111,10 +108,16 @@ const findAmount = textArr =>
   parseGermanNum(getValueByPreviousElement(textArr, 'Kurswert', 2));
 
 const findFee = textArr => {
+  let totalFee = Big(0);
   const fee = parseGermanNum(
     getValueByPreviousElement(textArr, 'Provision', 2)
   );
-  return fee && /([0-9]*)/.test(fee) ? fee : 0;
+  totalFee = totalFee.plus(fee && fee > 0 ? fee : 0);
+  const discount = getValueByPreviousElement(textArr, 'Rabatt', 2);
+  if ( discount &&  parseGermanNum(discount.replace(' ', ''))) {
+    totalFee = totalFee.plus(parseGermanNum(discount.replace(' ', '')));
+  }
+  return +totalFee;
 };
 
 const findTaxes = content => {
@@ -123,7 +126,7 @@ const findTaxes = content => {
   for (let lineNumber = 0; lineNumber < content.length; lineNumber++) {
     const line = content[lineNumber].toLowerCase();
 
-    if (line.includes('qust')) {
+    if (line.startsWith('qust')) {
       // Special case:
       // The withholding tax is payed in origin currency but ING write the amount in EUR to the QuST line: `QuSt 15,00 % (EUR 0,41)`
       // For withholding tax in EUR, we need to check the line with offset of 2.
@@ -134,7 +137,6 @@ const findTaxes = content => {
         totalTax = totalTax.plus(Big(parseGermanNum(regexMatch[1])));
         continue;
       }
-
       totalTax = totalTax.plus(Big(parseGermanNum(content[lineNumber + 2])));
       lineNumber += 2;
       continue;
@@ -161,73 +163,64 @@ const findPayout = textArr => {
   const bruttoIndex = textArr.indexOf('Brutto');
   if (!(textArr[bruttoIndex + 1] === 'EUR')) {
     const foreignPayout = parseGermanNum(textArr[bruttoIndex + 2]);
-    return Big(foreignPayout).div(findExchangeRate(textArr));
+    return +Big(foreignPayout).div(findExchangeRate(textArr));
   } else {
-    return Big(parseGermanNum(textArr[bruttoIndex + 2]));
+    return +Big(parseGermanNum(textArr[bruttoIndex + 2]));
   }
+};
+
+const findForeignInfoPayout = textArr => {
+  const fxRateIdx = textArr.indexOf('Umg. z. Dev.-Kurs');
+  const fxRate = textArr[fxRateIdx + 1].substr(
+    1,
+    textArr[fxRateIdx].length - 1
+  );
+
+  return [textArr[fxRateIdx - 2], parseGermanNum(fxRate)];
 };
 
 const parseData = textArr => {
-  let type, date, time, isin, company, shares, price, amount, fee, tax;
-
-  if (isBuy(textArr)) {
-    type = 'Buy';
-    isin = findISIN(textArr);
-    company = findCompany(textArr);
-    date = findDate(textArr);
-    time = findOrderTime(textArr);
-    shares = findShares(textArr);
-    amount = findAmount(textArr);
-    price = findPrice(textArr);
-    fee = findFee(textArr);
-    tax = 0;
-  } else if (isSell(textArr)) {
-    type = 'Sell';
-    isin = findISIN(textArr);
-    company = findCompany(textArr);
-    date = findDate(textArr);
-    time = findOrderTime(textArr);
-    shares = findShares(textArr);
-    amount = findAmount(textArr);
-    price = findPrice(textArr);
-    fee = findFee(textArr);
-    tax = findTaxes(textArr);
-  } else if (isDividend(textArr)) {
-    type = 'Dividend';
-    isin = findISIN(textArr);
-    company = findCompany(textArr);
-    date = findDate(textArr);
-    shares = findShares(textArr);
-    amount = +findPayout(textArr);
-    price = findPrice(textArr);
-    fee = 0;
-    tax = findTaxes(textArr);
-  }
-
-  const [parsedDate, parsedDateTime] = createActivityDateTime(
+  let activity = {
+    broker: 'ing',
+    isin: findISIN(textArr),
+    company: findCompany(textArr),
+    shares: findShares(textArr),
+    price: findPrice(textArr),
+    fee: 0,
+    tax: 0,
+  };
+  const [date, datetime] = findDateTime(textArr);
+  [activity.date, activity.datetime] = createActivityDateTime(
     date,
-    time,
+    datetime,
     'dd.MM.yyyy',
     'dd.MM.yyyy HH:mm:ss'
   );
-
-  return validateActivity({
-    broker: 'ing',
-    type,
-    date: parsedDate,
-    datetime: parsedDateTime,
-    isin,
-    company,
-    shares,
-    price,
-    amount,
-    fee,
-    tax,
-  });
+  if (isBuy(textArr)) {
+    activity.type = 'Buy';
+    activity.amount = findAmount(textArr);
+    activity.fee = findFee(textArr);
+  } else if (isSell(textArr)) {
+    activity.type = 'Sell';
+    activity.amount = findAmount(textArr);
+    activity.fee = findFee(textArr);
+    activity.tax = findTaxes(textArr);
+  } else if (isDividend(textArr)) {
+    activity.type = 'Dividend';
+    activity.tax = findTaxes(textArr);
+    activity.amount = findPayout(textArr);
+    if (textArr.includes('Umg. z. Dev.-Kurs')) {
+      [activity.foreignCurrency, activity.fxRate] = findForeignInfoPayout(
+        textArr
+      );
+    }
+  }
+  return validateActivity(activity);
 };
 
 export const parsePages = contents => {
-  const activities = [parseData(contents[0])];
+  // Information regarding dividends can be split across multiple pdf pages
+  const activities = [parseData(contents.flat())];
 
   return {
     activities,
