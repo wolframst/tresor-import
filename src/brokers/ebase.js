@@ -62,9 +62,17 @@ function parseBaseAction(pdfArray, pdfOffset, actionType) {
     pdfArray[pdfOffset + 6],
     undefined
   );
-  if (actionType === 'Buy' && pdfArray[pdfOffset] === 'Wiederanlage Fondsertrag') {
-    if (!pdfArray[pdfOffset + 5].endsWith('EUR') && !pdfArray[pdfOffset + 7].endsWith('EUR')) {
-      throw (new ForeignOnlyReinvest('Found a reinvest containing only a non-EUR currency, can not be parsed yet.'))
+  if (
+    actionType === 'Buy' &&
+    pdfArray[pdfOffset] === 'Wiederanlage Fondsertrag'
+  ) {
+    if (
+      !pdfArray[pdfOffset + 5].endsWith('EUR') &&
+      !pdfArray[pdfOffset + 7].endsWith('EUR')
+    ) {
+      throw new ForeignOnlyReinvest(
+        'Found a reinvest containing only a non-EUR currency, can not be parsed yet.'
+      );
     }
   }
   const activity = {
@@ -106,8 +114,7 @@ const parseData = pdfPages => {
             return undefined;
           }
           actions.push(action);
-        }
-        catch ( error ) {
+        } catch (error) {
           // In this case there is a reinvest in a foreing currency where the payout was also in a foreign currency
           // No base currency values are given yet so T1 can't handle this as of now. Base Currency is assumed to be
           // EUR which is hardcoded atm. Only workaround I could think of (SirGibihm)
@@ -146,11 +153,9 @@ export const canParsePage = (content, extension) =>
 
 export const parsePages = contents => {
   const activities = parseData(contents);
-  const status = activities !== undefined ? 0 : 6
+  const status = activities !== undefined ? 0 : 6;
   return {
     activities,
     status,
   };
-
-
 };

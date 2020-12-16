@@ -171,14 +171,32 @@ const isOverviewStatement = content =>
       line.includes('DEPOTAUSZUG') || line.includes('JAHRESDEPOTABSTIMMUNG')
   );
 
-export const canParsePage = (content, extension) =>
-  extension === 'pdf' &&
-  content.some(line => line.includes('TRADE REPUBLIC BANK GMBH')) &&
-  (isBuySingle(content) ||
+const detectedButIgnoredDocument = content => {
+  return (
+    // When the document contains one of the following lines, we want to ignore these document.
+    content.some(line => line.includes('KOSTENINFORMATION')) ||
+    content.some(line => line.includes('SPLIT')) ||
+    content.some(line => line === 'SPARPLANAUSFÜHRUNG FEHLGESCHLAGEN')
+  );
+};
+
+const isSupportedDocument = content => {
+  return (
+    isBuySingle(content) ||
     isBuySavingsPlan(content) ||
     isSell(content) ||
     isDividend(content) ||
-    isOverviewStatement(content));
+    isOverviewStatement(content)
+  );
+};
+
+export const canParsePage = (content, extension) =>
+  extension === 'pdf' &&
+  content.some(
+    line =>
+      line.includes('TRADE REPUBLIC BANK GMBH') &&
+      (isSupportedDocument(content) || detectedButIgnoredDocument(content))
+  );
 
 // Functions to parse an overview Statement
 const parsePositionAsActivity = (content, startLineNumber) => {
@@ -295,19 +313,26 @@ const parseTransaction = textArr => {
 
 export const parsePages = contents => {
   let activities = [];
+  const allPagesFlat = contents.flat();
+
+  if (detectedButIgnoredDocument(allPagesFlat)) {
+    // We know this type and we don't want to support it.
+    return {
+      activities,
+      status: 7,
+    };
+  }
 
   if (isOverviewStatement(contents[0])) {
-    const content = contents.flat();
-
     try {
-      parseOverviewStatement(content).forEach(activity => {
+      parseOverviewStatement(allPagesFlat).forEach(activity => {
         activities.push(activity);
       });
     } catch (exception) {
       console.error(
         'Error while parsing over statement (trade republic)',
         exception,
-        content
+        allPagesFlat
       );
     }
   } else {

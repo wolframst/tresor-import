@@ -142,9 +142,9 @@ const parseTransactionLog = pdfPages => {
 
 export const canParsePage = (content, extension) => {
   return (
-      extension === 'pdf' &&
-      content.some(line => allowedDegiroCountries.includes(line)) &&
-      isTransactionOverview(content)
+    extension === 'pdf' &&
+    content.some(line => allowedDegiroCountries.includes(line)) &&
+    isTransactionOverview(content)
   );
 };
 

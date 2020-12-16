@@ -59,7 +59,8 @@ const findDateBuySell = content => {
   }
   // Might be a super old file, test from 2003
   if (
-    (content[lineNumber + 1].toLowerCase().startsWith('kauf') || content[lineNumber + 1].toLowerCase().startsWith('verkauf')) &&
+    (content[lineNumber + 1].toLowerCase().startsWith('kauf') ||
+      content[lineNumber + 1].toLowerCase().startsWith('verkauf')) &&
     content[lineNumber + 1].toLowerCase().includes('am')
   ) {
     return content[lineNumber + 1].split(/\s+/)[2];
@@ -307,9 +308,7 @@ export const canParsePage = (content, extension) => {
   const isConsors =
     content.some(
       line => line.toLowerCase && line.toLowerCase().includes('consorsbank')
-    ) ||
-    content[1] ===
-      'POSTFACH 17 43';
+    ) || content[1] === 'POSTFACH 17 43';
 
   if (!isConsors) {
     return false;
