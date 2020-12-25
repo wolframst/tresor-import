@@ -145,7 +145,7 @@ const parseData = pdfPages => {
   return actions;
 };
 
-export const canParsePage = (content, extension) =>
+export const canParseFirstPage = (content, extension) =>
   extension === 'pdf' &&
   content.some(
     line =>

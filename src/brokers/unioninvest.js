@@ -187,9 +187,7 @@ const parseBuySell = (
   isRedistribution = false,
   taxReinvest = false
 ) => {
-  const dateIdx =
-    findPriorRegexMatch(pdfPage, activityIdx, dateRegex) -
-    1;
+  const dateIdx = findPriorRegexMatch(pdfPage, activityIdx, dateRegex) - 1;
   const companyIsinDict = createCompanyIsinDict(pdfPage);
 
   const [parsedDate, parsedDateTime] = createActivityDateTime(
@@ -366,7 +364,7 @@ const parsePage = pdfPage => {
   return activities;
 };
 
-export const canParsePage = (pdfPage, extension) => {
+export const canParseFirstPage = (pdfPage, extension) => {
   return (
     extension === 'pdf' &&
     pdfPage.some(line =>

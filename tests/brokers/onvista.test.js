@@ -17,9 +17,9 @@ describe('Broker: onvista', () => {
   describe('Check all documents', () => {
     test('Can the document parsed with onvista', () => {
       allSamples.forEach(samples => {
-        expect(samples.some(item => onvista.canParsePage(item, 'pdf'))).toEqual(
-          true
-        );
+        expect(
+          samples.some(item => onvista.canParseFirstPage(item, 'pdf'))
+        ).toEqual(true);
       });
     });
 
@@ -37,7 +37,6 @@ describe('Broker: onvista', () => {
     test('should parse a PDF with multiple bills', () => {
       multiPageResult = onvista.parsePages(multiPageSamples[0]);
       expect(multiPageResult.activities.length).toEqual(2);
-      expect(console.error).toHaveBeenCalled();
     });
   });
 

@@ -14,7 +14,7 @@ describe('Broker: Cortal Consors', () => {
     test('Can one page parsed with cortal consors', () => {
       allSamples.forEach(samples => {
         expect(
-          samples.some(item => cortalconsors.canParsePage(item, 'pdf'))
+          samples.some(item => cortalconsors.canParseFirstPage(item, 'pdf'))
         ).toEqual(true);
       });
     });
@@ -38,7 +38,7 @@ describe('Broker: Cortal Consors', () => {
           broker: 'cortalconsors',
           type: 'Buy',
           date: '2005-10-17',
-          datetime: '2005-10-17T'+activities[0].datetime.substr(11),
+          datetime: '2005-10-17T' + activities[0].datetime.substr(11),
           wkn: '978174',
           company: 'ACATIS AKT.GLOB.FONDS UI',
           shares: 0.31273,

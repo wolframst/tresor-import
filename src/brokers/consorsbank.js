@@ -309,7 +309,7 @@ const detectedButIgnoredDocument = content => {
   );
 };
 
-export const canParsePage = (content, extension) => {
+export const canParseFirstPage = (content, extension) => {
   if (extension !== 'pdf') {
     return false;
   }

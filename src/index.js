@@ -14,7 +14,7 @@ export const allImplementations = [
 export const findImplementation = (pages, extension) => {
   // The broker or app will be selected by the content of the first page
   return allImplementations.filter(implementation =>
-    implementation.canParsePage(pages[0], extension)
+    implementation.canParseFirstPage(pages[0], extension)
   );
 };
 
@@ -57,9 +57,15 @@ export const parseActivitiesFromPages = (pages, extension) => {
 
 const filterResultActivities = result => {
   if (result.activities !== undefined) {
-    result.activities = result.activities.filter(
-      activity => activity !== undefined
-    );
+    if (
+      result.activities.filter(activity => activity === undefined).length > 0
+    ) {
+      // One or more activities are invalid and can't be validated with the validateActivity function. We should ignore this document and return the specific status code.
+      result.activities = undefined;
+      result.status = 6;
+
+      return result;
+    }
 
     // If no activity exists, set the status code to 5
     const numberOfActivities = result.activities.length;

@@ -175,22 +175,25 @@ const findPayout = text => {
   return parseGermanNum(amount);
 };
 
-export const canParsePage = (content, extension) =>
+export const canParseFirstPage = (content, extension) =>
   extension === 'pdf' &&
   ((content.some(line => line.includes(onvistaIdentificationString)) &&
     !content.some(line => line.includes(smartbrokerIdentificationString))) ||
     (content.some(line => line.includes('Webtrading onvista bank')) &&
       detectedButIgnoredDocument(content)));
 
-export const isBuy = text =>
-  text.some(t => t.includes('Wir haben für Sie gekauft'));
+export const isBuy = content =>
+  content.some(line => line.includes('Wir haben für Sie gekauft'));
 
-export const isSell = text =>
-  text.some(t => t.includes('Wir haben für Sie verkauft'));
+export const isSell = content =>
+  content.some(line => line.includes('Wir haben für Sie verkauft'));
 
-export const isDividend = text =>
-  text.some(t => t.includes('Erträgnisgutschrift')) ||
-  text.some(t => t.includes('Dividendengutschrift'));
+export const isDividend = content =>
+  content.some(line => line.includes('Erträgnisgutschrift')) ||
+  content.some(line => line.includes('Dividendengutschrift'));
+
+const canParsePage = content =>
+  isBuy(content) || isSell(content) || isDividend(content);
 
 const detectedButIgnoredDocument = content => {
   return (
@@ -260,10 +263,8 @@ export const parsePages = contents => {
   }
 
   for (let content of contents) {
-    try {
+    if (canParsePage(content)) {
       activities.push(parseData(content));
-    } catch (error) {
-      console.error('Error while parsing page (onvista)', error, content);
     }
   }
 

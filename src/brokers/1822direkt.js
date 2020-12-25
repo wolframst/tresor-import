@@ -68,10 +68,10 @@ const findShares = content =>
 const findAmount = (content, findTotalAmount) => {
   return formatNumber(
     content[
-    findLineNumberByContent(
-      content,
-      findTotalAmount ? 'Ausmachender Betrag' : 'Kurswert'
-    ) + 1
+      findLineNumberByContent(
+        content,
+        findTotalAmount ? 'Ausmachender Betrag' : 'Kurswert'
+      ) + 1
     ]
   );
 };
@@ -97,7 +97,7 @@ const formatNumber = value => {
 const findLineNumberByContent = (content, term) =>
   content.findIndex(line => line.includes(term));
 
-export const canParsePage = (content, extension) =>
+export const canParseFirstPage = (content, extension) =>
   extension === 'pdf' &&
   content.some(line => line.includes('1822direkt')) &&
   (isPageTypeBuy(content) ||
@@ -173,20 +173,12 @@ export const parsePages = contents => {
   let activities = [];
 
   for (let content of contents) {
-    try {
-      const activity = parsePage(content);
-      if (activity === undefined) {
-        continue;
-      }
-
-      activities.push(activity);
-    } catch (exception) {
-      console.error(
-        'Error while parsing page (1822direkt)',
-        exception,
-        content
-      );
+    const activity = parsePage(content);
+    if (activity === undefined) {
+      continue;
     }
+
+    activities.push(activity);
   }
 
   return {

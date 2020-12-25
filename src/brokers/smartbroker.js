@@ -108,14 +108,17 @@ const findOrderTime = content => {
   return content[lineNumber + 1].trim().substr(0, 5);
 };
 
-export const canParsePage = (content, extension) =>
+const canParsePage = content =>
+  onvista.isBuy(content) ||
+  onvista.isSell(content) ||
+  onvista.isDividend(content);
+
+export const canParseFirstPage = (content, extension) =>
   extension === 'pdf' &&
   content.some(line =>
     line.includes(onvista.smartbrokerIdentificationString)
   ) &&
-  (onvista.isBuy(content) ||
-    onvista.isSell(content) ||
-    onvista.isDividend(content));
+  canParsePage(content);
 
 const parseData = textArr => {
   const broker = 'smartbroker';
@@ -182,10 +185,8 @@ const parseData = textArr => {
 export const parsePages = contents => {
   const activities = [];
   for (let content of contents) {
-    try {
+    if (canParsePage(content)) {
       activities.push(parseData(content));
-    } catch (error) {
-      console.error('Error while parsing page (smartbroker)', error, content);
     }
   }
 

@@ -192,7 +192,7 @@ const isSupportedDocument = content => {
   );
 };
 
-export const canParsePage = (content, extension) =>
+export const canParseFirstPage = (content, extension) =>
   extension === 'pdf' &&
   content.some(
     line =>
@@ -326,28 +326,12 @@ export const parsePages = contents => {
   }
 
   if (isOverviewStatement(contents[0])) {
-    try {
-      parseOverviewStatement(allPagesFlat).forEach(activity => {
-        activities.push(activity);
-      });
-    } catch (exception) {
-      console.error(
-        'Error while parsing over statement (trade republic)',
-        exception,
-        allPagesFlat
-      );
-    }
+    parseOverviewStatement(allPagesFlat).forEach(activity => {
+      activities.push(activity);
+    });
   } else {
     for (let content of contents) {
-      try {
-        activities.push(parseTransaction(content));
-      } catch (exception) {
-        console.error(
-          'Error while parsing page (trade republic)',
-          exception,
-          content
-        );
-      }
+      activities.push(parseTransaction(content));
     }
   }
 
