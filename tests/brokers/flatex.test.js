@@ -209,6 +209,27 @@ describe('Broker: Flatex', () => {
         tax: 0,
       });
     });
+
+    test('Can parse statement: 2020_dropbox.json', () => {
+      const result = flatex.parsePages(buySamples[9]);
+
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'flatex',
+        type: 'Buy',
+        date: '2020-12-02',
+        datetime: '2020-12-02T18:31:00.000Z',
+        isin: 'US26210C1045',
+        company: 'DROPBOX INC CL. A',
+        shares: 60,
+        price: 16.60067896776978,
+        amount: 996.04,
+        fee: 15.9,
+        tax: 0,
+        fxRate: 1.20477,
+        foreignCurrency: 'USD',
+      });
+    });
   });
 
   describe('Sell', () => {
@@ -252,10 +273,9 @@ describe('Broker: Flatex', () => {
   });
 
   describe('Dividend', () => {
-    test('should map pdf data of sample 1 correctly', () => {
+    test('should map pdf data of sample correctly: 2020_apple.json', () => {
       const activities = flatex.parsePages(dividendSamples[0]).activities;
 
-      // stock
       expect(activities.length).toEqual(1);
       expect(activities[0]).toEqual({
         broker: 'flatex',
@@ -265,17 +285,18 @@ describe('Broker: Flatex', () => {
         isin: 'US0378331005',
         company: 'APPLE INC.',
         shares: 7,
-        amount: 4.96,
-        price: 4.96 / 7,
+        amount: 4.95997055305052,
+        price: 0.7085672218643599,
         fee: 0,
-        tax: +Big(4.96).minus(Big(3.6)), // calculate from Bemessungsgrundlage - Endbetrag#
+        tax: 1.35997055305052,
+        fxRate: 1.0867,
+        foreignCurrency: 'USD',
       });
     });
 
-    test('should map pdf data of sample 2 correctly', () => {
+    test('should map pdf data of sample correctly: 2019_microsoft.json', () => {
       const activities = flatex.parsePages(dividendSamples[1]).activities;
 
-      // stock
       expect(activities.length).toEqual(1);
       expect(activities[0]).toEqual({
         broker: 'flatex',
@@ -285,17 +306,18 @@ describe('Broker: Flatex', () => {
         isin: 'US5949181045',
         company: 'MICROSOFT DL-,00000625',
         shares: 16,
-        amount: 7.326928257160815, // only available in USD, thus using net dividend in EUR
-        price: 7.326928257160815 / 16,
+        amount: 7.326928257160815,
+        price: 0.45793301607255094,
         fee: 0,
-        tax: 0, // skip bc only available in USD
+        tax: 1.0969282571608152,
+        fxRate: 1.1137,
+        foreignCurrency: 'USD',
       });
     });
 
-    test('should map pdf data of sample 3 correctly', () => {
+    test('should map pdf data of sample correctly: 2018_msci_world.json', () => {
       const activities = flatex.parsePages(dividendSamples[2]).activities;
 
-      // index fund
       expect(activities.length).toEqual(1);
       expect(activities[0]).toEqual({
         broker: 'flatex',
@@ -305,10 +327,12 @@ describe('Broker: Flatex', () => {
         isin: 'DE000A1C9KL8',
         company: 'HSBC MSCI WORLD UC.ETF DZ',
         shares: 36,
-        amount: 3.02,
-        price: 3.02 / 36,
+        amount: 3.0142781597038604,
+        price: 0.08372994888066279,
         fee: 0,
-        tax: +Big(3.02).minus(Big(2.18)), // calculate from Bemessungsgrundlage - Endbetrag (note: diff in pdf is wrong by 0,01)
+        tax: 0.8342781597038604,
+        fxRate: 1.1346,
+        foreignCurrency: 'USD',
       });
     });
 
@@ -328,6 +352,8 @@ describe('Broker: Flatex', () => {
         price: 0.36485737492907827,
         fee: 0,
         tax: 0,
+        fxRate: 1.1579,
+        foreignCurrency: 'USD',
       });
     });
 
@@ -347,6 +373,25 @@ describe('Broker: Flatex', () => {
         price: 0.08239689813182939,
         fee: 0,
         tax: 0,
+      });
+    });
+
+    test('should map pdf data of sample correctly: 2020_royal_dutch_shell.json', () => {
+      const activities = flatex.parsePages(dividendSamples[5]).activities;
+
+      expect(activities.length).toEqual(1);
+      expect(activities[0]).toEqual({
+        broker: 'flatex',
+        type: 'Dividend',
+        date: '2020-09-22',
+        datetime: '2020-09-22T' + activities[0].datetime.substring(11),
+        isin: 'GB00B03MLX29',
+        company: 'ROYAL DUTCH SHELL A EO-07',
+        shares: 25,
+        amount: 3.38,
+        price: 0.1352,
+        fee: 0,
+        tax: 0.51,
       });
     });
   });
@@ -399,8 +444,15 @@ describe('Broker: Flatex', () => {
   });
 
   describe('Validate all ignored statements', () => {
-    test('The statement should be ignored: 2020_order_confirmation', () => {
+    test('The statement should be ignored: 2020_order_confirmation.json', () => {
       const result = flatex.parsePages(ignoredSamples[0]);
+
+      expect(result.status).toEqual(7);
+      expect(result.activities.length).toEqual(0);
+    });
+
+    test('The statement should be ignored: 2020_saving_plan_confirmation.json', () => {
+      const result = flatex.parsePages(ignoredSamples[1]);
 
       expect(result.status).toEqual(7);
       expect(result.activities.length).toEqual(0);

@@ -121,10 +121,29 @@ const findShares = (textArr, startLineNumber) => {
   );
 };
 
-const findPrice = (textArr, startLineNumber) =>
-  parseGermanNum(
-    getTableValueByKey(textArr, startLineNumber, 'Kurs').split(' ')[0]
-  );
+const findPrice = (content, startLineNumber) => {
+  const lineValue = getTableValueByKey(content, startLineNumber, 'Kurs');
+  if (!lineValue) {
+    return undefined;
+  }
+
+  return Big(parseGermanNum(lineValue));
+};
+
+const findPriceCurrency = (content, startLineNumber) => {
+  const lineValue = getTableValueByKey(content, startLineNumber, 'Kurs', 2);
+  if (!lineValue) {
+    return undefined;
+  }
+
+  const currency = lineValue.split(/\s+/)[0];
+  if (!/[A-Z]{3}/.test(currency)) {
+    // This can't be the ISO currency code. Better safe than sorry...
+    return undefined;
+  }
+
+  return currency;
+};
 
 const findAmount = (textArr, startLineNumber) =>
   parseGermanNum(
@@ -206,26 +225,8 @@ const findTax = (textArr, startLineNumber) =>
       )
     : 0;
 
-const findDividendTax = (textArr, startLineNumber) => {
-  const assessmentBasis = getTableValueByKey(
-    textArr,
-    startLineNumber,
-    'grundlage'
-  )
-    ? parseGermanNum(
-        getTableValueByKey(textArr, startLineNumber, 'grundlage').split(' ')[0]
-      )
-    : 0; // Bemessungsgrundlage
-  const netDividend = getTableValueByKey(textArr, startLineNumber, 'Endbetrag')
-    ? parseGermanNum(
-        getTableValueByKey(textArr, startLineNumber, 'Endbetrag').split(' ')[0]
-      )
-    : 0;
-
-  return assessmentBasis > 0
-    ? +Big(assessmentBasis).minus(Big(netDividend))
-    : 0;
-};
+const findNetPayout = (content, startLineNumber) =>
+  parseGermanNum(getTableValueByKey(content, startLineNumber, 'Endbetrag', 1));
 
 const findDateDividend = (textArr, startLineNumber) => {
   const date = getTableValueByKey(textArr, startLineNumber, 'Valuta', 1);
@@ -236,64 +237,98 @@ const findDateDividend = (textArr, startLineNumber) => {
   return getTableValueByKey(textArr, startLineNumber, 'Valuta', 2);
 };
 
-const findPayout = (textArr, startLineNumber) => {
-  const assessmentBasis = getTableValueByKey(
-    textArr,
-    startLineNumber,
-    'grundlage'
-  )
-    ? parseGermanNum(
-        getTableValueByKey(textArr, startLineNumber, 'grundlage').split(' ')[0]
-      )
-    : 0; // Bemessungsgrundlage
+const findPayout = (textArr, startLineNumber, fxRate, foreignCurrency) => {
+  const payoutAmount = Big(
+    // Use groupIndex 1 for the amount.
+    parseGermanNum(grossValueByGroupIndex(textArr, startLineNumber, 1))
+  );
 
-  if (assessmentBasis <= 0) {
-    let payoutForeign = getTableValueByKey(
-      textArr,
-      startLineNumber,
-      'Bruttodividende'
-    );
-
-    if (payoutForeign === null) {
-      payoutForeign = getTableValueByKey(
-        textArr,
-        startLineNumber,
-        'Bruttoausschüttung'
-      );
-    }
-
-    if (payoutForeign !== null) {
-      let conversionRate = getTableValueByKey(
-        textArr,
-        startLineNumber,
-        'Devisenkurs',
-        1
-      );
-
-      if (conversionRate != null && conversionRate.trim().length === 0) {
-        // In some formats we need to match the second group, when only the `Devisenkurs` is in the line:
-        // Devisenkurs     :        1,113700
-        // insead of
-        // Devisenkurs     :    1,157900         *Einbeh. Steuer     :         0,00 EUR
-        conversionRate = getTableValueByKey(
-          textArr,
-          startLineNumber,
-          'Devisenkurs',
-          2
-        );
-      }
-
-      if (conversionRate === null) {
-        return parseGermanNum(payoutForeign.split(' ')[0]);
-      }
-
-      return +Big(parseGermanNum(payoutForeign.split(' ')[0])).div(
-        parseGermanNum(conversionRate.split(' ')[0])
-      );
-    }
+  if (foreignCurrency === undefined) {
+    // When no foreign currency is set no conversion is required.
+    return payoutAmount;
   }
 
-  return assessmentBasis;
+  // Use groupIndex 2 for the currency.
+  const payoutCurrency = grossValueByGroupIndex(textArr, startLineNumber, 2);
+  if (foreignCurrency !== payoutCurrency) {
+    // The payout currency (e.g. USD) is unequal to the fxRate currency (e.g. CAD). No conversion is required.
+    throw new Error(
+      'Unable to convert the payout currency ' +
+        payoutCurrency +
+        ' with the fx rate of currency ' +
+        foreignCurrency
+    );
+  }
+
+  return payoutAmount.div(fxRate);
+};
+
+// GroupIndex = 1: amount, GroupIndex = 2: currency
+const grossValueByGroupIndex = (content, startLineNumber, groupIndex) => {
+  let amount = getTableValueByKey(
+    content,
+    startLineNumber,
+    'Bruttodividende',
+    groupIndex
+  );
+  if (amount) {
+    return amount;
+  }
+
+  amount = getTableValueByKey(
+    content,
+    startLineNumber,
+    'Bruttoausschüttung',
+    groupIndex
+  );
+  if (amount) {
+    return amount;
+  }
+
+  amount = getTableValueByKey(
+    content,
+    startLineNumber,
+    'grundlage',
+    groupIndex
+  );
+  if (amount) {
+    return amount;
+  }
+
+  return undefined;
+};
+
+// This function returns an array with: fxRate, foreignCurrency, baseCurrency (or undefined).
+const findForeignInformation = (content, startLineNumber) => {
+  let fxRate = getTableValueByKey(content, startLineNumber, 'Devisenkurs', 1);
+
+  if (fxRate != null && fxRate.trim().length === 0) {
+    // In some formats we need to match the second group, when only the `Devisenkurs` is in the line:
+    // Devisenkurs     :        1,113700
+    // insead of
+    // Devisenkurs     :    1,157900         *Einbeh. Steuer     :         0,00 EUR
+    fxRate = getTableValueByKey(content, startLineNumber, 'Devisenkurs', 2);
+  }
+
+  if (fxRate === null || !/\d+,\d+/.test(fxRate)) {
+    // When no fxRate applies some documets have the field without a value, so we need to check if the value is a valid number:
+    // Devisenkurs                            Provision      EUR                 5,00
+    // or
+    // Devisenkurs                            Eigene Spesen
+    return [undefined, undefined, undefined];
+  }
+
+  // Use groupIndex 2 for the currency.
+  let foreignCurrency = grossValueByGroupIndex(content, startLineNumber, 2);
+  if (foreignCurrency === undefined) {
+    foreignCurrency = findPriceCurrency(content, startLineNumber);
+  }
+
+  return [
+    Big(parseGermanNum(fxRate)),
+    foreignCurrency,
+    getTableValueByKey(content, startLineNumber, 'Endbetrag', 2),
+  ];
 };
 
 const lineContains = (textArr, lineNumber, value) =>
@@ -312,14 +347,16 @@ export const canParseDocument = (pages, extension) => {
     (firstPageContent.some(line => line.includes('Kauf')) ||
       firstPageContent.some(line => line.includes('Verkauf')) ||
       firstPageContent.some(line => line.includes('Dividendengutschrift')) ||
-      firstPageContent.some(line => line.includes('Ertragsmitteilung')))
+      firstPageContent.some(line => line.includes('Ertragsmitteilung')) ||
+      detectedButIgnoredDocument(firstPageContent))
   );
 };
 
 const detectedButIgnoredDocument = content => {
   return (
     // When the document contains one of the following lines, we want to ignore these document.
-    content.some(line => line.toLowerCase().includes('auftragsbestätigung'))
+    content.some(line => line.toLowerCase().includes('auftragsbestätigung')) ||
+    content.some(line => line.toLowerCase().includes('einrichtung sparplan nr'))
   );
 };
 
@@ -328,49 +365,71 @@ const parsePage = (textArr, startLineNumber) => {
     date,
     datetime,
     time,
-    isin,
-    company,
-    shares,
-    price,
+    isin = findISIN(textArr, startLineNumber),
+    company = findCompany(textArr, startLineNumber),
+    shares = findShares(textArr, startLineNumber),
+    price = findPrice(textArr, startLineNumber),
+    priceCurrency = findPriceCurrency(textArr, startLineNumber),
     amount,
     fee,
-    tax;
+    tax,
+    fxRate,
+    foreignCurrency,
+    baseCurrency;
+
+  [fxRate, foreignCurrency, baseCurrency] = findForeignInformation(
+    textArr,
+    startLineNumber
+  );
 
   if (lineContains(textArr, startLineNumber, 'Kauf')) {
     type = 'Buy';
-    isin = findISIN(textArr, startLineNumber);
-    company = findCompany(textArr, startLineNumber);
     date = findDateBuySell(textArr, startLineNumber);
     time = findOrderTime(textArr, startLineNumber);
-    shares = findShares(textArr, startLineNumber);
     amount = findAmount(textArr, startLineNumber);
-    price = findPrice(textArr, startLineNumber);
     fee = findFee(textArr, startLineNumber);
     tax = 0;
   } else if (lineContains(textArr, startLineNumber, 'Verkauf')) {
     type = 'Sell';
-    isin = findISIN(textArr, startLineNumber);
-    company = findCompany(textArr, startLineNumber);
     date = findDateBuySell(textArr, startLineNumber);
     time = findOrderTime(textArr, startLineNumber);
-    shares = findShares(textArr, startLineNumber);
     amount = findAmount(textArr, startLineNumber);
-    price = findPrice(textArr, startLineNumber);
     fee = findFee(textArr, startLineNumber);
     tax = findTax(textArr, startLineNumber);
   } else if (
     lineContains(textArr, startLineNumber - 3, 'Dividendengutschrift') ||
     lineContains(textArr, startLineNumber - 3, 'Ertragsmitteilung')
   ) {
+    const grossPayout = findPayout(
+      textArr,
+      startLineNumber,
+      fxRate,
+      foreignCurrency
+    );
+    const netPayout = findNetPayout(textArr, startLineNumber);
+    const taxAmount = +grossPayout.minus(netPayout);
+
     type = 'Dividend';
-    isin = findISIN(textArr, startLineNumber);
-    company = findCompany(textArr, startLineNumber);
     date = findDateDividend(textArr, startLineNumber);
-    shares = findShares(textArr, startLineNumber);
-    amount = findPayout(textArr, startLineNumber);
-    price = amount / shares;
+    amount = +grossPayout;
+    price = grossPayout.div(shares);
     fee = 0;
-    tax = findDividendTax(textArr, startLineNumber);
+
+    // A possible tax amount lower than 0.00 should be ignored because this can be a number ceiling issue with fxrate conversion
+    tax = Math.abs(taxAmount) < 0.01 ? 0 : taxAmount;
+  }
+
+  const canConvertCurrency =
+    fxRate !== undefined &&
+    foreignCurrency !== undefined &&
+    foreignCurrency != baseCurrency;
+  if (
+    priceCurrency !== undefined &&
+    canConvertCurrency &&
+    (type === 'Buy' || type === 'Sell')
+  ) {
+    // For buy and sell documents we need to convert the currency to the base currency (when possible).
+    price = price.div(fxRate);
   }
 
   [date, datetime] = createActivityDateTime(date, time);
@@ -383,11 +442,17 @@ const parsePage = (textArr, startLineNumber) => {
     isin,
     company,
     shares,
-    price,
+    price: +price,
     amount,
     fee,
     tax,
   };
+
+  if (canConvertCurrency) {
+    activity.fxRate = +fxRate;
+    activity.foreignCurrency = foreignCurrency;
+  }
+
   return validateActivity(activity);
 };
 
@@ -403,17 +468,14 @@ export const parsePages = contents => {
   }
 
   for (let content of contents) {
-    try {
-      findTableIndexes(content).forEach(index => {
-        let activity = parsePage(content, index);
-        if (activity === undefined) {
-          return;
-        }
-        activities.push(activity);
-      });
-    } catch (exception) {
-      console.error('Error while parsing page (flatex)', exception, content);
-    }
+    findTableIndexes(content).forEach(index => {
+      let activity = parsePage(content, index);
+      if (activity === undefined) {
+        return;
+      }
+
+      activities.push(activity);
+    });
   }
 
   return {
