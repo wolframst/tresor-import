@@ -30,8 +30,34 @@ const findCompany = (textArr, pieceIdx, isinIdx) =>
     .join(' ')
     .trim();
 
-const findDateBuySell = textArr =>
-  getValueByPreviousElement(textArr, 'Schlusstag').split(' ')[0];
+const findDateBuySell = content => {
+  // Use normaly the closing date for market orders.
+  let dateLine = getValueByPreviousElement(content, 'Schlusstag');
+
+  if (dateLine === '') {
+    // Sometimes a currency fx rate has a givven date:
+    // Devisenkursdatum
+    // 10.03.2016
+    dateLine = getValueByPreviousElement(content, 'Devisenkursdatum');
+  }
+
+  if (dateLine === '') {
+    // Sometimes a date is set in the currency fx rate line:
+    // Devisenkurs (EUR/CAD) 1,5268 vom 14.04.2020
+    const lineIndex = content.findIndex(line => line.includes('Devisenkurs '));
+    const regex = /(\d{2}\.\d{2}\.\d{4})/;
+    if (lineIndex > 0 && regex.test(content[lineIndex])) {
+      dateLine = regex.exec(content[lineIndex])[0];
+    }
+  }
+
+  if (dateLine === '') {
+    // Last one: Get the date of the document. This is not the real order date but it's better than nothing.
+    dateLine = getValueByPreviousElement(content, 'Datum');
+  }
+
+  return dateLine.split(' ')[0];
+};
 
 const findTimeBuySell = content => {
   const lineContent = getValueByPreviousElement(content, '-Zeit');
@@ -42,10 +68,21 @@ const findTimeBuySell = content => {
   return lineContent.split(' ')[1].trim();
 };
 
-const findPrice = textArr =>
-  parseGermanNum(
-    getValueByPreviousElement(textArr, 'Ausführungskurs').split(' ')[0]
-  );
+const findPrinceLine = content => {
+  let priceLine = getValueByPreviousElement(content, 'Ausführungskurs');
+
+  if (priceLine === '') {
+    priceLine = getValueByPreviousElement(content, 'Abrech.-Preis');
+  }
+
+  return priceLine;
+};
+
+const findPrice = content =>
+  parseGermanNum(findPrinceLine(content).split(' ')[0]);
+
+const findPriceCurrency = content =>
+  parseGermanNum(findPrinceLine(content).split(' ')[1]);
 
 const findAmount = textArr =>
   parseGermanNum(getValueByPreviousElement(textArr, 'Kurswert').trim());
@@ -92,13 +129,29 @@ const findFee = pages => {
 const findDateDividend = textArr =>
   getValueByPreviousElement(textArr, 'Zahlbarkeitstag').split(' ')[0];
 
-const findPayout = textArr => {
-  let index = textArr.indexOf('Ausschüttung');
-  if (index < 0) index = textArr.lastIndexOf('Dividendengutschrift');
-  const currency = textArr[index + 2];
-  const eurAmount =
-    currency === 'EUR' ? textArr[index + 1] : textArr[index + 3];
-  return parseGermanNum(eurAmount.split(' ')[0]);
+const findPayout = (content, baseCurrency) => {
+  let payoutLineIndex = content.indexOf('Ausschüttung');
+  if (payoutLineIndex < 0) {
+    // Some documents have the payout amount after the last:
+    // Dividendengutschrift
+    payoutLineIndex = content.lastIndexOf('Dividendengutschrift');
+  }
+
+  if (payoutLineIndex < 0) {
+    // Some documents have the payout amount after:
+    // Dividendengutschrift nach § 27 KStG
+    payoutLineIndex = content.findIndex(line =>
+      line.includes('Dividendengutschrift')
+    );
+  }
+
+  const currencyLine = content[payoutLineIndex + 2];
+  const payout =
+    currencyLine === baseCurrency
+      ? content[payoutLineIndex + 1]
+      : content[payoutLineIndex + 3];
+
+  return Big(parseGermanNum(payout.split(/\s+/)[0]));
 };
 
 const findTax = pages => {
@@ -145,6 +198,39 @@ const findTax = pages => {
   return +totalTax;
 };
 
+// This function returns an array with: fxRate, foreignCurrency, baseCurrency (or undefined).
+const findForeignInformation = content => {
+  let fxRate, foreignCurrency, baseCurrency;
+
+  let fxRateLineIndex = content.findIndex(line => line === 'Devisenkurs');
+  if (fxRateLineIndex > 0) {
+    // Get the fxRate and the currency from:
+    // Devisenkurs
+    // EUR / USD
+    // 1,1011
+    fxRate = content[fxRateLineIndex + 2];
+    foreignCurrency = content[fxRateLineIndex + 1].split('/')[1].trim();
+  } else {
+    fxRateLineIndex = content.findIndex(line => line.includes('Devisenkurs '));
+    if (fxRateLineIndex > 0) {
+      // Match the fxRate and the currency from:
+      // Devisenkurs (EUR/CAD) 1,5268 vom 14.04.2020
+      const lineContent = content[fxRateLineIndex];
+      fxRate = lineContent.split(/\s+/)[2];
+      foreignCurrency = lineContent.split('/')[1].substring(0, 3);
+    }
+  }
+
+  const baseCurrencyLineIndex = content.findIndex(
+    line => line === 'Ausmachender Betrag'
+  );
+  if (baseCurrencyLineIndex) {
+    baseCurrency = content[baseCurrencyLineIndex + 2];
+  }
+
+  return [Big(parseGermanNum(fxRate)), foreignCurrency, baseCurrency];
+};
+
 const isBuy = textArr =>
   textArr.some(
     t =>
@@ -166,19 +252,49 @@ const isDividend = textArr =>
       t.includes('Ausschüttung Investmentfonds')
   );
 
+const detectedButIgnoredDocument = content => {
+  return (
+    // When the document contains one of the following lines, we want to ignore these document.
+    content.some(line => line.includes('Auftragsbestätigung')) ||
+    content.some(line => line.includes('Streichungsbestätigung')) ||
+    content.some(line => line.includes('Ausführungsanzeige'))
+  );
+};
+
 export const canParseDocument = (pages, extension) => {
   const allPages = pages.flat();
   return (
     extension === 'pdf' &&
-    allPages.some(line => line.includes('BIC BYLADEM1001')) &&
-    (isBuy(allPages) || isSell(allPages) || isDividend(allPages))
+    (allPages.some(line => line.includes('BIC BYLADEM1001')) ||
+      allPages[0] === '10919 Berlin') &&
+    (isBuy(allPages) ||
+      isSell(allPages) ||
+      isDividend(allPages) ||
+      detectedButIgnoredDocument(allPages))
   );
 };
 
 export const parsePages = pages => {
   const allPages = pages.flat();
 
-  let type, amount, price, date, time;
+  if (detectedButIgnoredDocument(pages.flat())) {
+    // We know this type and we don't want to support it.
+    return {
+      activities: [],
+      status: 7,
+    };
+  }
+
+  let type,
+    amount,
+    price,
+    priceCurrency,
+    date,
+    time,
+    fxRate,
+    foreignCurrency,
+    baseCurrency;
+
   const pieceIdx = allPages.findIndex(t => t.includes('Stück'));
   const isinIdx = findISINIdx(allPages, pieceIdx);
   const isin = allPages[isinIdx];
@@ -187,22 +303,32 @@ export const parsePages = pages => {
   const fee = findFee(pages);
   const tax = findTax(pages);
 
+  [fxRate, foreignCurrency, baseCurrency] = findForeignInformation(allPages);
+
+  const canConvertCurrency =
+    fxRate !== undefined &&
+    foreignCurrency !== undefined &&
+    foreignCurrency != baseCurrency;
+
   if (isBuy(allPages)) {
     type = 'Buy';
     amount = findAmount(allPages);
     price = findPrice(allPages);
+    priceCurrency = findPriceCurrency(allPages);
     date = findDateBuySell(allPages);
     time = findTimeBuySell(allPages);
   } else if (isSell(allPages)) {
     type = 'Sell';
     amount = findAmount(allPages);
     price = findPrice(allPages);
+    priceCurrency = findPriceCurrency(allPages);
     date = findDateBuySell(allPages);
     time = findTimeBuySell(allPages);
   } else if (isDividend(allPages)) {
+    const payout = findPayout(allPages, baseCurrency);
     type = 'Dividend';
-    amount = findPayout(allPages);
-    price = amount / shares;
+    amount = +payout;
+    price = +payout.div(shares);
     date = findDateDividend(allPages);
   }
 
@@ -212,6 +338,15 @@ export const parsePages = pages => {
     'dd.MM.yyyy',
     'dd.MM.yyyy HH:mm:ss'
   );
+
+  if (
+    priceCurrency !== undefined &&
+    canConvertCurrency &&
+    (type === 'Buy' || type === 'Sell')
+  ) {
+    // For buy and sell documents we need to convert the currency to the base currency (when possible).
+    price = +Big(price).div(fxRate);
+  }
 
   const activity = {
     broker: 'dkb',
@@ -226,6 +361,11 @@ export const parsePages = pages => {
     fee,
     tax,
   };
+
+  if (canConvertCurrency) {
+    activity.fxRate = +fxRate;
+    activity.foreignCurrency = foreignCurrency;
+  }
 
   return {
     activities: [validateActivity(activity)],

@@ -12,6 +12,7 @@ export const sellSamples = [
   require('./sell/redemption_etf.json'),
   require('./sell/2020_etf_tecdax.json'),
   require('./sell/2020_msci_world.json'),
+  require('./sell/2020_data_deposit_box.json'),
 ];
 
 export const dividendsSamples = [
@@ -19,4 +20,17 @@ export const dividendsSamples = [
   require('./dividend/dividend_taxed_usd_2.json'),
   require('./dividend/dividend_taxed_usd_3.json'),
   require('./dividend/dividend_taxed_usd_4.json'),
+  require('./dividend/2020_deutsche_telekom.json'),
 ];
+
+export const ignoredSamples = [
+  require('./ignore/order_confirmation.json'),
+  require('./ignore/order_cancelation.json'),
+  require('./ignore/execution_information.json'),
+];
+
+export const allSamples = buySamples.concat(
+  sellSamples,
+  dividendsSamples,
+  ignoredSamples
+);

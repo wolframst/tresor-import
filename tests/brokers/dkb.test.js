@@ -1,11 +1,15 @@
 import { findImplementation } from '../../src';
 import * as dkb from '../../src/brokers/dkb';
-import { buySamples, sellSamples, dividendsSamples } from './__mocks__/dkb';
+import {
+  buySamples,
+  sellSamples,
+  dividendsSamples,
+  ignoredSamples,
+  allSamples,
+} from './__mocks__/dkb';
 
 describe('DKB broker', () => {
   let consoleErrorSpy;
-
-  const allSamples = buySamples.concat(sellSamples).concat(dividendsSamples);
 
   describe('Check all documents', () => {
     test('Can the document parsed with DKB', () => {
@@ -206,6 +210,26 @@ describe('DKB broker', () => {
         tax: 180.68,
       });
     });
+
+    test('Should map the document correctly: 2020_data_deposit_box.json', () => {
+      const activities = dkb.parsePages(sellSamples[6]).activities;
+
+      expect(activities[0]).toEqual({
+        broker: 'dkb',
+        type: 'Sell',
+        date: '2020-04-14',
+        datetime: '2020-04-14T' + activities[0].datetime.substring(11),
+        isin: 'CA2376321048',
+        company: 'DATA DEPOSIT BOX INC. REGISTERED SHARES O.N.',
+        shares: 1712,
+        price: 0.008181556195965417,
+        amount: 14.01,
+        fee: 10,
+        tax: 0,
+        fxRate: 1.5268,
+        foreignCurrency: 'CAD',
+      });
+    });
   });
 
   describe('Dividend', () => {
@@ -224,6 +248,8 @@ describe('DKB broker', () => {
         amount: 25.49,
         fee: 0,
         tax: 3.82,
+        fxRate: 1.0874,
+        foreignCurrency: 'USD',
       });
     });
 
@@ -238,10 +264,12 @@ describe('DKB broker', () => {
         isin: 'US5949181045',
         company: 'MICROSOFT CORP. REGISTERED SHARES DL-,00000625',
         shares: 5,
-        price: 0.32599999999999996,
+        price: 0.326,
         amount: 1.63,
         fee: 0,
         tax: 0.24,
+        fxRate: 1.1011,
+        foreignCurrency: 'USD',
       });
     });
     test('should map pdf data of sample 3 correctly', () => {
@@ -259,8 +287,11 @@ describe('DKB broker', () => {
         amount: 4.5,
         fee: 0,
         tax: 0,
+        fxRate: 1.0878,
+        foreignCurrency: 'USD',
       });
     });
+
     test('should map pdf data of sample 4 correctly', () => {
       const activities = dkb.parsePages(dividendsSamples[3]).activities;
 
@@ -276,7 +307,50 @@ describe('DKB broker', () => {
         amount: 4.5,
         fee: 0,
         tax: 0.83,
+        fxRate: 1.0878,
+        foreignCurrency: 'USD',
       });
+    });
+
+    test('Should map the document correctly: 2020_deutsche_telekom.json', () => {
+      const activities = dkb.parsePages(dividendsSamples[4]).activities;
+
+      expect(activities[0]).toEqual({
+        broker: 'dkb',
+        type: 'Dividend',
+        date: '2020-06-24',
+        datetime: '2020-06-24T' + activities[0].datetime.substring(11),
+        isin: 'DE0005557508',
+        company: 'DEUTSCHE TELEKOM AG NAMENS-AKTIEN O.N.',
+        shares: 32,
+        price: 0.6,
+        amount: 19.2,
+        fee: 0,
+        tax: 0,
+      });
+    });
+  });
+
+  describe('Validate all ignored statements', () => {
+    test('The statement should be ignored: order_confirmation.json', () => {
+      const result = dkb.parsePages(ignoredSamples[0]);
+
+      expect(result.status).toEqual(7);
+      expect(result.activities.length).toEqual(0);
+    });
+
+    test('The statement should be ignored: order_cancelation.json', () => {
+      const result = dkb.parsePages(ignoredSamples[1]);
+
+      expect(result.status).toEqual(7);
+      expect(result.activities.length).toEqual(0);
+    });
+
+    test('The statement should be ignored: execution_information.json', () => {
+      const result = dkb.parsePages(ignoredSamples[2]);
+
+      expect(result.status).toEqual(7);
+      expect(result.activities.length).toEqual(0);
     });
   });
 
