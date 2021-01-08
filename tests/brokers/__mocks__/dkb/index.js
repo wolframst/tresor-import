@@ -23,6 +23,11 @@ export const dividendsSamples = [
   require('./dividend/2020_deutsche_telekom.json'),
 ];
 
+export const savingsplanSamples = [
+  require('./savingsplan/2019_half_yearly_savings_plan_summary.json'),
+  require('./savingsplan/2020_half_yearly_savings_plan_summary.json'),
+];
+
 export const ignoredSamples = [
   require('./ignore/order_confirmation.json'),
   require('./ignore/order_cancelation.json'),
@@ -32,5 +37,6 @@ export const ignoredSamples = [
 export const allSamples = buySamples.concat(
   sellSamples,
   dividendsSamples,
+  savingsplanSamples,
   ignoredSamples
 );
