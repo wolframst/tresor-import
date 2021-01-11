@@ -17,8 +17,9 @@ const findWKN = textArr => {
   if (wknIndexOld >= 0) {
     return textArr[wknIndexOld].split(/\s+/)[3];
   }
+
   // for newer dividend files
-  const wknStringIndex = textArr.findIndex(line => line === 'WKN');
+  const wknStringIndex = textArr.indexOf('WKN');
   if (wknStringIndex >= 0) {
     const wknIndexOffset = findFirstIsinIndexInArray(
       textArr.slice(wknStringIndex)
@@ -29,7 +30,7 @@ const findWKN = textArr => {
 };
 
 const findCompany = textArr => {
-  let indexIsinWkn = textArr.findIndex(line => line === 'ISIN');
+  let indexIsinWkn = textArr.indexOf('ISIN');
   // For older documents there is only a wkn
   if (indexIsinWkn < 0) {
     indexIsinWkn = textArr.findIndex(line => line.includes('WKN: '));
@@ -125,10 +126,16 @@ const findDividendShares = textArr => {
   }
   // For older files:
   else {
-    const idxOld = textArr.findIndex(line => line === 'DIVIDENDENGUTSCHRIFT');
-    if (idxOld >= 0) {
-      return parseGermanNum(textArr[idxOld + 1].split(/\s+/)[1]);
+    let lineNumber = textArr.indexOf('DIVIDENDENGUTSCHRIFT');
+    if (lineNumber < 0) {
+      lineNumber = textArr.indexOf('ERTRAGSGUTSCHRIFT');
     }
+
+    if (lineNumber < 0) {
+      return undefined;
+    }
+
+    return parseGermanNum(textArr[lineNumber + 1].split(/\s+/)[1]);
   }
 };
 
