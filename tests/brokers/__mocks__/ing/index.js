@@ -11,6 +11,7 @@ export const sellSamples = [
   require('./sell/sell1.json'),
   require('./sell/sell2.json'),
   require('./sell/sell3.json'),
+  require('./sell/2021_morgan_stanley_multi_tax.json'),
 ];
 
 export const dividendsSamples = [
@@ -23,6 +24,10 @@ export const dividendsSamples = [
   require('./dividend/iShares_dj_glob_titans_50_with_taxes.json'),
   require('./dividend/waste_management_with_taxes.json'),
   require('./dividend/HKD_byd_co_ltd_with_taxes.json'),
+];
+
+export const paybackSamples = [
+  require('./payback/2021_turbo_knockout_payback.json'),
 ];
 
 export const invalidSamples = [require('./invalid/invalid_buy.json')];
