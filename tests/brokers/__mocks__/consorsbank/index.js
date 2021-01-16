@@ -12,6 +12,7 @@ export const buySamples = [
   require('./buy/2003_buy_acatis.json'),
   require('./buy/2021_allianz_strategy_fond.json'),
   require('./buy/2021_janus_henderson_capital_funds.json'),
+  require('./buy/2021_put_citi_gl.json'),
 ];
 
 export const sellSamples = [
@@ -41,6 +42,7 @@ export const dividendsSamples = [
 export const ignoredSamples = [
   require('./ignored/2020_cost_information.json'),
   require('./ignored/2020_stock_split.json'),
+  require('./ignored/2021_advance_flat_rate.json'),
 ];
 
 export const allSamples = buySamples
