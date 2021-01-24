@@ -378,7 +378,7 @@ export const canParseDocument = (pages, extension) => {
 };
 
 export const parsePages = contents => {
-  const contentsFlat = contents.flat()
+  const contentsFlat = contents.flat();
   const type = activityType(contentsFlat);
   let activities;
 
