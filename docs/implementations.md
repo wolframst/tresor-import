@@ -14,7 +14,7 @@ a more detailed explanation is given behind brokername.
 | flatex / FinTech Group                                 | Buy, Sell, Dividend                           |                                                                                    |
 | Gratisbroker                                           | Buy, Sell, Dividend                           |                                                                                    |
 | ING (DE)                                               | Buy, Sell, Dividend, Depot Statement          |                                                                                    |
-| onvista                                                | Buy, Sell, Dividend                           |                                                                                    |
+| onvista                                                | Buy, Sell, Dividend, Account Statements       |                                                                                    |
 | Oskar                                                  | Buy, Sell, Dividend                           |                                                                                    |
 | Portfolio Performance                                  | Buy, Sell, Dividend                           | Must be cleared of splits, only `.csv` files generated via menu `File` -> `export` |
 | Postbank                                               | Buy, Sell, Dividend                           |                                                                                    |
