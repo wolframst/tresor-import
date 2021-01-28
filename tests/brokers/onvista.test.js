@@ -8,6 +8,7 @@ import {
   multiPageSamples,
   ignoredSamples,
   accountStatementSamples,
+  portfolioOverviewSamples,
   allSamples,
 } from './__mocks__/onvista';
 
@@ -562,6 +563,60 @@ describe('Broker: onvista', () => {
         shares: 4.9438,
         price: +Big(0.39).div(4.9438),
         amount: 0.39,
+        fee: 0,
+        tax: 0,
+      });
+    });
+  });
+
+  describe('Portfolio Overview', () => {
+    test('Should map the overview to transfer in activities', () => {
+      const activities = onvista.parsePages(portfolioOverviewSamples[0])
+        .activities;
+
+      expect(activities.length).toEqual(10);
+      expect(activities.slice(0, 2)).toEqual([
+        {
+          broker: 'onvista',
+          type: 'TransferIn',
+          date: '2020-10-09',
+          datetime: '2020-10-09T17:50:24.000Z',
+          isin: 'US88579Y1010',
+          wkn: '851745',
+          company: '3M RG',
+          shares: 3,
+          price: 139.12,
+          amount: 417.36,
+          fee: 0,
+          tax: 0,
+        },
+        {
+          broker: 'onvista',
+          type: 'TransferIn',
+          date: '2020-10-09',
+          datetime: '2020-10-09T14:00:49.000Z',
+          isin: 'KYG017191142',
+          wkn: 'A2PVFU',
+          company: 'ALIBABA GRP RG',
+          shares: 30,
+          price: 30.5527,
+          amount: 916.58,
+          fee: 0,
+          tax: 0,
+        },
+      ]);
+
+      expect(activities[activities.length - 1]).toEqual({
+        broker: 'onvista',
+        type: 'TransferIn',
+        date: '2020-10-09',
+        datetime: '2020-10-09T19:55:19.000Z',
+        isin: 'IE00B1FZS467',
+        wkn: 'A0LEW9',
+        company: 'ISHS GLB INFRA USD',
+        shares: 4.1283,
+        price: 23.9808,
+        amount: 99,
         fee: 0,
         tax: 0,
       });

@@ -203,6 +203,8 @@ const findForeignInformation = pdfPage => {
 
 export const canParseDocument = (pages, extension) => {
   const firstPageContent = pages[0];
+  const allPagesFlat = pages.flat();
+
   return (
     extension === 'pdf' &&
     ((firstPageContent.some(line =>
@@ -217,9 +219,11 @@ export const canParseDocument = (pages, extension) => {
         detectedButIgnoredDocument(firstPageContent)) ||
       // Account Statements
       (firstPageContent.some(line => line.includes('www.onvista-bank.de')) &&
-        pages
-          .flat()
-          .some(line => line.toLowerCase().startsWith('kontoauszug nr. '))))
+        isAccountStatement(allPagesFlat)) ||
+      // Depotübersicht
+      (allPagesFlat[allPagesFlat.length - 1] ===
+        'Powered by TCPDF (www.tcpdf.org)' &&
+        isOverviewPage(allPagesFlat)))
   );
 };
 
@@ -239,11 +243,65 @@ const isAccountStatement = content =>
 const canParsePage = content =>
   isBuy(content) || isSell(content) || isDividend(content);
 
+const isOverviewPage = content =>
+  content.some(line => line.includes('Depotübersicht Wertpapiere'));
+
 const detectedButIgnoredDocument = content => {
   return (
     // When the document contains one of the following lines, we want to ignore these document.
     content.some(line => line.includes('Kostenausweis'))
   );
+};
+
+const parseOverview = content => {
+  let activities = [];
+
+  for (
+    let tableStartLine = content.findIndex(line =>
+      line.includes('Aktueller Wert')
+    );
+    tableStartLine < content.length;
+    tableStartLine += 16
+  ) {
+    const shares = content[tableStartLine + 1].trim();
+    if (shares === '/') {
+      // The last two lines don't contains securities and are marked with /. We can leave the loop here.
+      break;
+    }
+
+    const [parsedDate, parsedDateTime] = createActivityDateTime(
+      content[tableStartLine + 5],
+      content[tableStartLine + 6],
+      'dd.MM.yyyy',
+      'dd.MM.yyyy HH:mm:ss'
+    );
+
+    const activity = validateActivity(
+      {
+        broker: 'onvista',
+        type: 'TransferIn',
+        date: parsedDate,
+        datetime: parsedDateTime,
+        wkn: content[tableStartLine + 3].split('/')[0].trim(),
+        isin: content[tableStartLine + 3].split('/')[1].trim(),
+        company: content[tableStartLine + 2],
+        shares: parseGermanNum(shares),
+        price: parseGermanNum(content[tableStartLine + 9].split(' ')[0]),
+        amount: parseGermanNum(content[tableStartLine + 10].split(' ')[0]),
+        fee: 0,
+        tax: 0,
+      },
+      true
+    );
+
+    if (activity === undefined) {
+      continue;
+    }
+
+    activities.push(activity);
+  }
+
+  return activities;
 };
 
 const parseAccountStatement = pdfPages => {
@@ -362,8 +420,12 @@ export const parsePages = pdfPages => {
       status: 7,
     };
   }
-  if (isAccountStatement(pdfPages.flat())) {
-    activities = parseAccountStatement(pdfPages.flat());
+
+  const allPagesFlat = pdfPages.flat();
+  if (isAccountStatement(allPagesFlat)) {
+    activities = parseAccountStatement(allPagesFlat);
+  } else if (isOverviewPage(allPagesFlat)) {
+    activities = parseOverview(allPagesFlat);
   } else {
     for (let content of pdfPages) {
       if (canParsePage(content)) {

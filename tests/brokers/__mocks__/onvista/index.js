@@ -32,6 +32,10 @@ export const accountStatementSamples = [
   require('./accountStatement/2020_account_statement_3.json'),
 ];
 
+export const portfolioOverviewSamples = [
+  require('./portfolioOverview/2020_overview.json'),
+];
+
 export const ignoredSamples = [require('./ignored/2020_cost_information.json')];
 
 export const allSamples = buySamples.concat(
@@ -39,5 +43,6 @@ export const allSamples = buySamples.concat(
   dividendsSamples,
   multiPageSamples,
   accountStatementSamples,
+  portfolioOverviewSamples,
   ignoredSamples
 );
