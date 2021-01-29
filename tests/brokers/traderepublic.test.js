@@ -423,7 +423,7 @@ describe('Broker: Trade Republic', () => {
         price: 13.296,
         shares: 10,
         tax: 0,
-        type: 'Buy',
+        type: 'TransferIn',
       });
       expect(activities[1]).toEqual({
         amount: 210.79,
@@ -436,41 +436,102 @@ describe('Broker: Trade Republic', () => {
         price: 4.684222222222222,
         shares: 45,
         tax: 0,
-        type: 'Buy',
+        type: 'TransferIn',
       });
     });
 
-    test('Map a quarter statement with two pages correctly', () => {
+    test('Should map the pdf data correctly for: two_pages', () => {
       const activities = traderepublic.parsePages(quarterSamples[2]).activities;
+      expect(activities.length).toEqual(16);
 
       expect(activities[10]).toEqual({
         amount: 366.12,
         broker: 'traderepublic',
         company: 'VISA Inc.',
         date: '2020-03-31',
-        datetime: '2020-03-31T' + activities[1].datetime.substring(11),
+        datetime: '2020-03-31T' + activities[10].datetime.substring(11),
         fee: 0,
         isin: 'US92826C8394',
         price: 183.06,
         shares: 2,
         tax: 0,
-        type: 'Buy',
+        type: 'TransferIn',
       });
+
       expect(activities[11]).toEqual({
         amount: 391,
         broker: 'traderepublic',
         company: 'Zoom Video',
         date: '2020-03-31',
-        datetime: '2020-03-31T' + activities[1].datetime.substring(11),
+        datetime: '2020-03-31T' + activities[11].datetime.substring(11),
         fee: 0,
         isin: 'US98980L1017',
         price: 130.33333333333334,
         shares: 3,
         tax: 0,
-        type: 'Buy',
+        type: 'TransferIn',
+      });
+    });
+
+    test('Should map the pdf data correctly for: 2020_year_end_statement', () => {
+      const activities = traderepublic.parsePages(quarterSamples[3]).activities;
+      expect(activities.length).toEqual(56);
+
+      expect(activities[2]).toEqual({
+        amount: 234.8,
+        broker: 'traderepublic',
+        company: 'Manganese X Energy',
+        date: '2020-12-30',
+        datetime: '2020-12-30T' + activities[2].datetime.substring(11),
+        fee: 0,
+        isin: 'CA5626781028',
+        price: 0.2348,
+        shares: 1000,
+        tax: 0,
+        type: 'TransferIn',
       });
 
-      expect(activities.length).toEqual(15);
+      expect(activities[3]).toEqual({
+        amount: 80,
+        broker: 'traderepublic',
+        company: 'Standard Lithium Ltd.',
+        date: '2020-12-30',
+        datetime: '2020-12-30T' + activities[3].datetime.substring(11),
+        fee: 0,
+        isin: 'CA8536061010',
+        price: 1.309009750486379,
+        shares: 61.1149,
+        tax: 0,
+        type: 'TransferIn',
+      });
+
+      expect(activities[7]).toEqual({
+        amount: 149.96,
+        broker: 'traderepublic',
+        company: 'VARTA AG',
+        date: '2020-12-30',
+        datetime: '2020-12-30T' + activities[7].datetime.substring(11),
+        fee: 0,
+        isin: 'DE000A0TGJ55',
+        price: 112.58258258258259,
+        shares: 1.332,
+        tax: 0,
+        type: 'TransferIn',
+      });
+
+      expect(activities[54]).toEqual({
+        amount: 3200,
+        broker: 'traderepublic',
+        company: 'iShsIII-Core MSCI World',
+        date: '2020-12-30',
+        datetime: '2020-12-30T' + activities[54].datetime.substring(11),
+        fee: 0,
+        isin: 'IE00B4L5Y983',
+        price: 54.997181394453534,
+        shares: 58.1848,
+        tax: 0,
+        type: 'TransferIn',
+      });
     });
   });
 
