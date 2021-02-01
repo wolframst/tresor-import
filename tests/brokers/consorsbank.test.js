@@ -367,6 +367,48 @@ describe('Broker: Consorsbank', () => {
         },
       ]);
     });
+
+    test('Should map the document correctly: 2020_fraport', () => {
+      const activity = consorsbank.parsePages(buySamples[16]).activities;
+
+      expect(activity).toEqual([
+        {
+          broker: 'consorsbank',
+          type: 'Buy',
+          company: 'FRAPORT AG FFM.AIRPORT',
+          date: '2020-04-06',
+          datetime: '2020-04-06T13:29:58.000Z',
+          isin: 'DE0005773303',
+          wkn: '577330',
+          price: 40.16,
+          shares: 3,
+          amount: 120.48,
+          tax: 0,
+          fee: 15.45,
+        },
+      ]);
+    });
+
+    test('Should map the document correctly: 2020_palantir', () => {
+      const activity = consorsbank.parsePages(buySamples[17]).activities;
+
+      expect(activity).toEqual([
+        {
+          broker: 'consorsbank',
+          type: 'Buy',
+          company: 'PALANTIR TECHNOLOGIES INC',
+          date: '2020-12-04',
+          datetime: '2020-12-04T10:21:02.000Z',
+          isin: 'US69608A1088',
+          wkn: 'A2QA4J',
+          price: 20.2,
+          shares: 300,
+          amount: 6060,
+          tax: 0,
+          fee: 29.28,
+        },
+      ]);
+    });
   });
 
   describe('Sell', () => {

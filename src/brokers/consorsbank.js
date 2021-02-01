@@ -239,39 +239,35 @@ const getNumberAfterTermWithOffset = (content, termToLower, offset = 0) => {
 };
 
 const findFee = content => {
-  const feeBrokerage = getNumberAfterTermWithOffset(content, 'provision');
-  const feeBase = getNumberAfterTermWithOffset(content, 'grundgebühr');
+  const parsedFees = [];
+
+  parsedFees.push(getNumberAfterTermWithOffset(content, 'provision'));
+  parsedFees.push(getNumberAfterTermWithOffset(content, 'grundgebühr'));
+  parsedFees.push(getNumberAfterTermWithOffset(content, 'börsenplatzgebühr'));
+  parsedFees.push(getNumberAfterTermWithOffset(content, 'handelsentgelt'));
+  parsedFees.push(getNumberAfterTermWithOffset(content, 'transaktionsentgelt'));
+
+  if (!content.some(line => line.includes('Ausgabegebühr 0,00%'))) {
+    parsedFees.push(getNumberAfterTermWithOffset(content, 'ausgabegebühr'));
+  }
+
   const bonificationIdx = content.findIndex(line =>
     line.startsWith('BONIFIKAT')
   );
-  const exchangeFeeIdx = content.indexOf('Börsenplatzgebühr');
-  let feeIssue = 0;
-  if (!content.some(line => line.includes('Ausgabegebühr 0,00%'))) {
-    feeIssue = getNumberAfterTermWithOffset(content, 'ausgabegebühr');
-  }
 
   let totalFee = Big(0);
-  if (feeBrokerage !== undefined) {
-    totalFee = totalFee.plus(feeBrokerage);
-  }
 
-  if (feeBase !== undefined) {
-    totalFee = totalFee.plus(feeBase);
-  }
+  parsedFees.forEach(feeCandidate => {
+    if (feeCandidate === undefined) {
+      return;
+    }
 
-  if (feeIssue !== undefined) {
-    totalFee = totalFee.plus(feeIssue);
-  }
+    totalFee = totalFee.plus(feeCandidate);
+  });
 
   if (bonificationIdx >= 0) {
     totalFee = totalFee.minus(
       parseGermanNum(content[bonificationIdx].split(/\s+/)[4])
-    );
-  }
-
-  if (exchangeFeeIdx >= 0) {
-    totalFee = totalFee.plus(
-      parseGermanNum(content[exchangeFeeIdx + 1].split(/\s+/)[0])
     );
   }
 
