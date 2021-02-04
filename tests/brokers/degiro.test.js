@@ -1,5 +1,6 @@
 import { findImplementation } from '@/index';
 import * as degiro from '../../src/brokers/degiro';
+import Big from 'big.js';
 import { transactionLog } from './__mocks__/degiro';
 
 const allSamples = transactionLog; //.concat(futureSamples);
@@ -165,6 +166,66 @@ describe('Broker: DEGIRO', () => {
         amount: 999.6,
         tax: 0,
         fee: 2.08,
+      });
+    });
+
+    test('Can parse 2021_transaction_log_1', () => {
+      const activities = degiro.parsePages(transactionLog[4]).activities;
+      expect(activities.length).toEqual(4);
+      expect(
+        activities.filter(activity => activity !== undefined).length
+      ).toEqual(4);
+      expect(activities[0]).toEqual({
+        broker: 'degiro',
+        type: 'Buy',
+        date: '2021-01-29',
+        datetime: '2021-01-29T14:41:00.000Z',
+        isin: 'US00165C1045',
+        company: 'AMC ENTERTAINMENT HOLD',
+        shares: 15,
+        price: +Big(160.55).div(15),
+        amount: 160.55,
+        fee: 0.55,
+        tax: 0,
+        fxRate: 1.2134,
+        foreignCurrency: 'USD',
+      });
+
+      expect(activities[3]).toEqual({
+        broker: 'degiro',
+        type: 'Buy',
+        date: '2021-01-15',
+        datetime: '2021-01-15T08:10:00.000Z',
+        isin: 'CH0038863350',
+        company: 'NESTLE SA',
+        shares: 4,
+        price: 92.81,
+        amount: 371.24,
+        fee: 4.19,
+        tax: 0,
+        fxRate: 1.0766,
+        foreignCurrency: 'CHF',
+      });
+    });
+
+    test('Can parse 2021_transaction_log_2', () => {
+      const activities = degiro.parsePages(transactionLog[5]).activities;
+      expect(activities.length).toEqual(1);
+      expect(
+        activities.filter(activity => activity !== undefined).length
+      ).toEqual(1);
+      expect(activities[0]).toEqual({
+        broker: 'degiro',
+        type: 'Buy',
+        date: '2021-01-26',
+        datetime: '2021-01-26T13:54:00.000Z',
+        isin: 'DE000TR6T1W3',
+        company: 'CALL 15.12.21 NOKIA 8',
+        shares: 207,
+        price: 0.48,
+        amount: 99.36,
+        fee: 2.11,
+        tax: 0,
       });
     });
   });
