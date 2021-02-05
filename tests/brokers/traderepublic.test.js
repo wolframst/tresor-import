@@ -399,12 +399,33 @@ describe('Broker: Trade Republic', () => {
         fxRate: 1.1803,
       });
     });
+
+    test('Should map the pdf data correctly for: 2021_reinvest_main_street_capital', () => {
+      const activities = traderepublic.parsePages(dividendSamples[10])
+        .activities;
+
+      expect(activities.length).toEqual(1);
+      expect(activities[0]).toEqual({
+        broker: 'traderepublic',
+        type: 'Dividend',
+        isin: 'US56035L1044',
+        company: 'Main Street Capital Corp.',
+        date: '2021-01-15',
+        datetime: '2021-01-15T' + activities[0].datetime.substring(11),
+        amount: 2.527262433228578,
+        price: 0.16848416221523854,
+        shares: 15,
+        tax: 0.37744828548219017,
+        fee: 0,
+        foreignCurrency: 'USD',
+        fxRate: 1.21871,
+      });
+    });
   });
 
   describe('Validate quarter statement', () => {
     test('Map a empty quarter statement correctly', () => {
       const activities = traderepublic.parsePages(quarterSamples[0]).activities;
-
       expect(activities.length).toEqual(0);
     });
 
@@ -536,46 +557,12 @@ describe('Broker: Trade Republic', () => {
   });
 
   describe('Validate all ignored statements', () => {
-    test('The statement should be ignored: cost_information.json', () => {
-      const result = traderepublic.parsePages(ignoredSamples[0]);
-
-      expect(result.status).toEqual(7);
-      expect(result.activities.length).toEqual(0);
-    });
-
-    test('The statement should be ignored: reverse_split.json', () => {
-      const result = traderepublic.parsePages(ignoredSamples[1]);
-
-      expect(result.status).toEqual(7);
-      expect(result.activities.length).toEqual(0);
-    });
-
-    test('The statement should be ignored: saving_plan_failed.json', () => {
-      const result = traderepublic.parsePages(ignoredSamples[2]);
-
-      expect(result.status).toEqual(7);
-      expect(result.activities.length).toEqual(0);
-    });
-
-    test('The statement should be ignored: split.json', () => {
-      const result = traderepublic.parsePages(ignoredSamples[3]);
-
-      expect(result.status).toEqual(7);
-      expect(result.activities.length).toEqual(0);
-    });
-
-    test('The statement should be ignored: saving_plan_confirmation.json', () => {
-      const result = traderepublic.parsePages(ignoredSamples[4]);
-
-      expect(result.status).toEqual(7);
-      expect(result.activities.length).toEqual(0);
-    });
-
-    test('The statement should be ignored: saving_plan_change_confirmation.json', () => {
-      const result = traderepublic.parsePages(ignoredSamples[5]);
-
-      expect(result.status).toEqual(7);
-      expect(result.activities.length).toEqual(0);
+    test('All ignored statements return status 7 and no activities', () => {
+      ignoredSamples.forEach(pages => {
+        const result = traderepublic.parsePages(pages);
+        expect(result.status).toEqual(7);
+        expect(result.activities.length).toEqual(0);
+      });
     });
   });
 
