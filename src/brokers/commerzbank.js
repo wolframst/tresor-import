@@ -143,17 +143,17 @@ const parseSingleTransaction = textArr => {
     amount = findAmountBuy(textArr);
     price = findPriceBuy(textArr);
     fee = findFeeBuy(textArr, amount);
-  } else if (isSell(textArr)) { 
+  } else if (isSell(textArr)) {
     type = 'Sell';
     date = findDateBuySell(textArr);
-	time = findTimeSell(textArr);
+    time = findTimeSell(textArr);
     wkn = findWknBuy(textArr);
     company = findCompanyBuy(textArr);
     shares = +findSharesBuy(textArr);
     amount = findAmountBuy(textArr);
     price = findPriceBuy(textArr);
     fee = findFeeBuy(textArr, amount);
-  }	else if (isDividend(textArr)) {
+  } else if (isDividend(textArr)) {
     const foreignCurrencyIndex = textArr.indexOf('Devisenkurs:');
     const foreignDividend = foreignCurrencyIndex >= 0;
     type = 'Dividend';
@@ -384,9 +384,11 @@ export const canParseDocument = (pages, extension) => {
           joinedContent.toLowerCase().includes('onvista')
         )
       ) &&
-      (isBuy(firstPageContent) || isDividend(firstPageContent) || isSell(firstPageContent))) ||
-      isTransactionReport(firstPageContent) || 
-	  detectedButIgnoredDocument(firstPageContent))
+      (isBuy(firstPageContent) ||
+        isDividend(firstPageContent) ||
+        isSell(firstPageContent))) ||
+      isTransactionReport(firstPageContent) ||
+      detectedButIgnoredDocument(firstPageContent))
   );
 };
 
@@ -394,9 +396,9 @@ export const parsePages = contents => {
   let activities = [];
   if (detectedButIgnoredDocument(contents[0])) {
     return {
-	  activities,
-	  status: 7,
-	};
+      activities,
+      status: 7,
+    };
   }
 
   // Transaction Reports need to be handled completely different from individual
