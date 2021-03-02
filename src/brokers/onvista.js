@@ -191,6 +191,10 @@ const findGrossPayout = (text, tax) => {
   if (reinvestIdx >= 0) {
     return parseGermanNum(text[reinvestIdx + 2]);
   }
+  const foreignDividend = text.indexOf('ausländische Dividende');
+  if (foreignDividend >= 0) {
+    return parseGermanNum(text[foreignDividend + 2]);
+  }
 };
 
 const findForeignInformation = pdfPage => {
@@ -255,7 +259,12 @@ const isOverviewPage = content =>
 const detectedButIgnoredDocument = content => {
   return (
     // When the document contains one of the following lines, we want to ignore these document.
-    content.some(line => line.includes('Kostenausweis'))
+    content.some(
+      line =>
+        line.includes('Kostenausweis') ||
+        line === 'Storno - Erträgnisgutschrift' ||
+        line.startsWith('Stornierung und ')
+    )
   );
 };
 
