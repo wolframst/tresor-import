@@ -7,17 +7,17 @@ import {
   findFirstSearchtermIndexInArray,
 } from '@/helper';
 import { findFirstRegexIndexInArray } from '../helper';
-import { sbrokerIdentificationString } from './sbroker';
 
 // Both smartbroker and onvista use highly similar parsers due to them both being
 // daughter companies from BNP Paribas; a french bank. There is no string which
 // uniquely identifies onvista files so we have to construct a multistring
-// identifcation scheme.
+// identification scheme.
 export const onvistaIdentificationString = 'BELEGDRUCK=J';
 export const smartbrokerIdentificationStrings = [
   'Landsberger Straße 300',
   'Landsberger Straˇe 300',
 ];
+export const sbrokerIdentificationString = 'S Broker AG';
 
 export const findISIN = text => {
   return text[text.indexOf('ISIN') + 1];
@@ -49,7 +49,7 @@ export const findDateDividend = text => {
   return text[text.findIndex(t => t.includes('Zahltag')) + 1];
 };
 
-const findOrderTime = content => {
+export const findOrderTime = content => {
   // Extract the time after the line with Handelszeit which contains "17:33"
   const searchTerm = 'Handelszeit';
   const lineNumber = content.findIndex(t => t.includes(searchTerm));
@@ -198,7 +198,7 @@ const findGrossPayout = (text, tax) => {
   }
 };
 
-const findForeignInformation = pdfPage => {
+export const findForeignInformation = pdfPage => {
   const foreignCurrencyIdx = pdfPage.indexOf('Devisenkurs') + 1;
   if (foreignCurrencyIdx > 0) {
     const fxRate = parseGermanNum(pdfPage[foreignCurrencyIdx].split(/\s+/)[1]);

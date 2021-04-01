@@ -3,87 +3,23 @@ import {
   parseGermanNum,
   validateActivity,
   createActivityDateTime,
-  timeRegex,
   findFirstSearchtermIndexInArray,
 } from '@/helper';
 import { findFirstRegexIndexInArray } from '../helper';
+import {
+  findCompany,
+  findDateBuySell,
+  findOrderTime,
+  findISIN,
+  findShares,
+  findPrice,
+  findAmount,
+  findDateDividend,
+  findForeignInformation,
+  sbrokerIdentificationString,
+} from './onvista';
 
-export const sbrokerIdentificationString = 'S Broker AG';
-
-export const findISIN = text => {
-  return text[text.indexOf('ISIN') + 1];
-};
-
-export const findCompany = text => {
-  let company = text[text.findIndex(t => t.includes('ISIN')) - 1];
-  if (company === 'Gattungsbezeichnung') {
-    company = text[text.findIndex(t => t.includes('ISIN')) - 2];
-  }
-  if (company) return company;
-};
-
-export const findDateBuySell = text => {
-  const lineNumber = text.findIndex(t => t.includes('Handelstag'));
-
-  let date;
-  if (text[lineNumber + 1].split('.').length === 3) {
-    date = text[lineNumber + 1];
-  } else if (text[lineNumber - 1].split('.').length === 3) {
-    date = text[lineNumber - 1];
-  } else {
-    throw { text: 'Unknown date' };
-  }
-  return date;
-};
-
-export const findDateDividend = text => {
-  return text[text.findIndex(t => t.includes('Zahltag')) + 1];
-};
-
-const findOrderTime = content => {
-  // Extract the time after the line with Handelszeit which contains "17:33"
-  const searchTerm = 'Handelszeit';
-  const lineNumber = content.findIndex(t => t.includes(searchTerm));
-
-  if (lineNumber < 0) {
-    return undefined;
-  }
-
-  const lineContentFormatNew = content[lineNumber + 1].trim();
-  if (timeRegex(false).test(lineContentFormatNew)) {
-    return lineContentFormatNew;
-  }
-
-  const lineContentFormatOld = content[lineNumber - 1].trim();
-  if (timeRegex(false).test(lineContentFormatOld)) {
-    return lineContentFormatOld;
-  }
-
-  return undefined;
-};
-
-export const findShares = textArr => {
-  const sharesLine = textArr[textArr.findIndex(t => t.includes('STK'))];
-  return parseGermanNum(sharesLine.split(' ')[1]);
-};
-
-export const findPrice = (text, fxRate = undefined) => {
-  const priceLine = text[text.findIndex(t => t.includes('Kurs')) + 1];
-  const price = parseGermanNum(priceLine.split(' ')[1]);
-
-  return fxRate === undefined ? price : +Big(price).div(fxRate);
-};
-
-export const findAmount = (text, fxRate = undefined) => {
-  let amountIdx = text.findIndex(t => t.includes('Kurswert'));
-  if (amountIdx < 0) {
-    amountIdx = text.findIndex(t => t.includes('Bezugspreis'));
-  }
-  let amount = parseGermanNum(text[amountIdx + 2]);
-  return fxRate === undefined ? amount : +Big(amount).div(fxRate);
-};
-
-export const findFee = (content, fxRate = undefined) => {
+const findFee = (content, fxRate = undefined) => {
   let fee = Big(0);
   const potentialFees = [
     'Orderentgelt',
@@ -189,18 +125,6 @@ const findGrossPayout = (text, tax) => {
   }
 };
 
-const findForeignInformation = pdfPage => {
-  const foreignCurrencyIdx = pdfPage.indexOf('Devisenkurs') + 1;
-  if (foreignCurrencyIdx > 0) {
-    const fxRate = parseGermanNum(pdfPage[foreignCurrencyIdx].split(/\s+/)[1]);
-    const foreignCurrency = pdfPage[foreignCurrencyIdx]
-      .split(/\s+/)[0]
-      .split(/\//)[1];
-    return [foreignCurrency, fxRate];
-  }
-  return [undefined, undefined];
-};
-
 export const canParseDocument = (pages, extension) => {
   const allPagesFlat = pages.flat();
 
@@ -210,13 +134,13 @@ export const canParseDocument = (pages, extension) => {
   );
 };
 
-export const isBuy = content =>
+const isBuy = content =>
   content.some(line => line.includes('Wir haben für Sie gekauft'));
 
-export const isSell = content =>
+const isSell = content =>
   content.some(line => line.includes('Wir haben für Sie verkauft'));
 
-export const isDividend = content =>
+const isDividend = content =>
   content.some(line => line.includes('Erträgnisgutschrift')) ||
   content.some(line => line.includes('Dividendengutschrift'));
 
