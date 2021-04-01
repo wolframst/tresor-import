@@ -7,17 +7,8 @@ import {
   findFirstSearchtermIndexInArray,
 } from '@/helper';
 import { findFirstRegexIndexInArray } from '../helper';
-import { sbrokerIdentificationString } from './sbroker';
 
-// Both smartbroker and onvista use highly similar parsers due to them both being
-// daughter companies from BNP Paribas; a french bank. There is no string which
-// uniquely identifies onvista files so we have to construct a multistring
-// identifcation scheme.
-export const onvistaIdentificationString = 'BELEGDRUCK=J';
-export const smartbrokerIdentificationStrings = [
-  'Landsberger Straße 300',
-  'Landsberger Straˇe 300',
-];
+export const sbrokerIdentificationString = 'S Broker AG';
 
 export const findISIN = text => {
   return text[text.indexOf('ISIN') + 1];
@@ -95,6 +86,8 @@ export const findAmount = (text, fxRate = undefined) => {
 export const findFee = (content, fxRate = undefined) => {
   let fee = Big(0);
   const potentialFees = [
+    'Orderentgelt',
+    'Fremde Spesen',
     'Börsengebühr',
     'Fremdspesen',
     'Handelsplatzgebühr',
@@ -115,41 +108,10 @@ export const findFee = (content, fxRate = undefined) => {
 
 const findTax = text => {
   let totalTax = Big(0);
+  let lastTaxIndex = getLastTaxIx(text);
 
-  let lastTaxIndex = undefined;
-  let taxLineNumber = text.findIndex(t => t.startsWith('einbehaltene '));
-  if (taxLineNumber > 0) {
-    lastTaxIndex = taxLineNumber;
-  } else {
-    let taxLineNumber = text.findIndex(t => t.startsWith('einbehaltener '));
-    if (taxLineNumber > 0) {
-      lastTaxIndex = taxLineNumber;
-    }
-  }
-
-  const dayOfTradeLineNumber = text.findIndex(t => t.includes('Handelstag'));
-  if (lastTaxIndex === undefined && dayOfTradeLineNumber > 0) {
-    // This document hasn't any taxes or is an old document.
-    // Search the taxes between Kurswert und Handelstag.
-
-    let nameOfPositionLineNumber =
-      text.findIndex(t => t.includes('Kurswert')) + 3;
-    while (nameOfPositionLineNumber < dayOfTradeLineNumber) {
-      let nameOfPosition = text[nameOfPositionLineNumber];
-
-      if (
-        nameOfPosition.toLowerCase().includes('steuer') ||
-        nameOfPosition.toLowerCase().includes('zuschlag')
-      ) {
-        totalTax = totalTax.plus(
-          Big(parseGermanNum(text[nameOfPositionLineNumber + 2]))
-        );
-      }
-
-      nameOfPositionLineNumber += 4;
-    }
-
-    return +totalTax;
+  if (lastTaxIndex === undefined) {
+    totalTax = totalTax.plus(getSellTax(text));
   }
 
   while (lastTaxIndex !== undefined) {
@@ -169,16 +131,45 @@ const findTax = text => {
     totalTax = totalTax.plus(parseGermanNum(text[sourceTaxIndex + 2]));
   }
 
-  const witholdingTaxFondInputIdx = text.indexOf(
-    'anrechenbare Quellensteuer Fondseingangsseite'
-  );
-  if (witholdingTaxFondInputIdx >= 0) {
-    totalTax = totalTax.plus(
-      parseGermanNum(text[witholdingTaxFondInputIdx + 2])
-    );
-  }
+  totalTax = totalTax.plus(getWithholdingTax(text));
 
   return +totalTax;
+};
+
+const getLastTaxIx = text => {
+  let taxLineNumber = text.findIndex(t => t.startsWith('einbehaltene '));
+  if (taxLineNumber > 0) return taxLineNumber;
+
+  taxLineNumber = text.findIndex(t => t.startsWith('einbehaltener '));
+  if (taxLineNumber > 0) return taxLineNumber;
+
+  return undefined;
+};
+
+const getSellTax = text => {
+  let tax = Big(0);
+  const taxLineNumber = text.findIndex(t =>
+    t.startsWith('Kapitalertragsteuer')
+  );
+  if (taxLineNumber >= 0) {
+    tax = tax.plus(parseGermanNum(text[taxLineNumber + 2]));
+  }
+
+  const solidarityTaxLineNumber = text.findIndex(t =>
+    t.startsWith('Solidaritätszuschlag')
+  );
+  if (solidarityTaxLineNumber >= 0) {
+    tax = tax.plus(parseGermanNum(text[solidarityTaxLineNumber + 2]));
+  }
+  return tax;
+};
+
+const getWithholdingTax = text => {
+  const withholdingTaxFondInputIdx = text.indexOf(
+    'anrechenbare Quellensteuer Fondseingangsseite'
+  );
+  if (withholdingTaxFondInputIdx < 0) return 0;
+  return parseGermanNum(text[withholdingTaxFondInputIdx + 2]);
 };
 
 const findGrossPayout = (text, tax) => {
@@ -211,31 +202,11 @@ const findForeignInformation = pdfPage => {
 };
 
 export const canParseDocument = (pages, extension) => {
-  const firstPageContent = pages[0];
   const allPagesFlat = pages.flat();
 
   return (
     extension === 'pdf' &&
-    ((firstPageContent.some(line =>
-      line.includes(onvistaIdentificationString)
-    ) &&
-      !firstPageContent.some(
-        line =>
-          line.includes(smartbrokerIdentificationStrings[0]) ||
-          line.includes(smartbrokerIdentificationStrings[1])
-      ) &&
-      !allPagesFlat.some(line => line.includes(sbrokerIdentificationString))) ||
-      (firstPageContent.some(line =>
-        line.includes('Webtrading onvista bank')
-      ) &&
-        detectedButIgnoredDocument(firstPageContent)) ||
-      // Account Statements
-      (firstPageContent.some(line => line.includes('www.onvista-bank.de')) &&
-        isAccountStatement(allPagesFlat)) ||
-      // Depotübersicht
-      (allPagesFlat[allPagesFlat.length - 1] ===
-        'Powered by TCPDF (www.tcpdf.org)' &&
-        isOverviewPage(allPagesFlat)))
+    allPagesFlat.some(line => line.includes(sbrokerIdentificationString))
   );
 };
 
@@ -295,7 +266,7 @@ const parseOverview = content => {
 
     const activity = validateActivity(
       {
-        broker: 'onvista',
+        broker: 'sbroker',
         type: 'TransferIn',
         date: parsedDate,
         datetime: parsedDateTime,
@@ -346,7 +317,7 @@ const parseAccountStatement = pdfPages => {
       ? idx + 4
       : idx + 1;
     let activity = {
-      broker: 'onvista',
+      broker: 'sbroker',
       company: pdfPages[companyIdx],
       isin: pdfPages[isinIdx].split(/\s+/)[1],
       shares: parseGermanNum(pdfPages[sharesIdx].split(/\s+/)[1]),
@@ -383,7 +354,7 @@ const parseAccountStatement = pdfPages => {
 
 const parseSingleTransaction = pdfPage => {
   let activity = {
-    broker: 'onvista',
+    broker: 'sbroker',
     isin: findISIN(pdfPage),
     company: findCompany(pdfPage),
     shares: findShares(pdfPage),

@@ -1,6 +1,6 @@
 {
-  "name": "@tresor.one/import",
-  "version": "2.11.0",
+  "name": "@rentablo/pdf-import",
+  "version": "2.9.3",
   "description": "Creates Tresor One activities from PDF statements of brokers",
   "files": [
     "dist"
@@ -45,8 +45,10 @@
     "file-loader": "^6.0.0",
     "glob": "^7.1.6",
     "husky": "^4.2.5",
-    "jest": "^25.4.0",
+    "jest": "^25.5.4",
     "jest-cli": "^25.4.0",
+    "jest-extended": "^0.11.5",
+    "jest-watch-typeahead": "^0.6.1",
     "prettier": "2.0.5",
     "pretty-quick": "^2.0.1",
     "serve": "^11.3.2",
@@ -69,6 +71,13 @@
     ],
     "moduleNameMapper": {
       "@/(.*)$": "<rootDir>/src/$1"
-    }
+    },
+    "watchPlugins": [
+      "jest-watch-typeahead/filename",
+      "jest-watch-typeahead/testname"
+    ],
+    "setupFilesAfterEnv": [
+      "jest-extended"
+    ]
   }
 }

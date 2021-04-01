@@ -104,6 +104,12 @@
                 </div>
                 <p style="margin: .5em 0 0">
                   <strong>
+                    <small>{{ activity.broker }}</small>
+                  </strong>
+                </p>
+                <p style="margin: .5em 0 0">
+                  <strong>
+                    <small>{{ activity.broker }}</small>
                     <small v-if="activity.holding">{{ getHoldingName(activity.holding) }}</small>
                     <small v-else>{{ activity.company }}</small>
                   </strong>
