@@ -26,6 +26,12 @@ export const transferInSamples = [
   require('./transferIn/2020_caterpillar_transferIn_revsion.json'),
 ];
 
+export const multiPageSamples = [
+  require('./multiplePages/2021_multi_page_buy.json'),
+  require('./multiplePages/2021_multi_page_buy_with_ignored.json'),
+  require('./multiplePages/2021_multi_page_buy_sell_dividend.json'),
+];
+
 export const ignoredSamples = [
   require('./ignored/2020_ex_ante_cost.json'),
   require('./ignored/2021_portfolio_overview.json'),
