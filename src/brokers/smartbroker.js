@@ -251,7 +251,27 @@ const parseTransferIn = pdfPages => {
 };
 
 export const parsePages = pdfPages => {
-  const type = getDocumentType(pdfPages[0]);
+  const activitiesWithStatus = pdfPages.map(pdfPage => {
+    return parsePage(pdfPage);
+  });
+
+  const successful = activitiesWithStatus.reduce(
+    (acc, aws) => {
+      if (!aws.activities) return acc;
+      return aws.activities.length > 0 && aws.status === 0
+        ? { ...aws, activities: [...aws.activities, ...acc.activities] }
+        : acc;
+    },
+    { ...activitiesWithStatus[0], activities: [] }
+  );
+
+  return successful.activities.length > 0
+    ? successful
+    : activitiesWithStatus[0];
+};
+
+const parsePage = pdfPage => {
+  const type = getDocumentType(pdfPage);
   switch (type) {
     case 'Ignored':
       return {
@@ -262,17 +282,17 @@ export const parsePages = pdfPages => {
     case 'Sell':
     case 'Dividend':
       return {
-        activities: parseBuySellDividend(pdfPages, type),
+        activities: parseBuySellDividend(pdfPage, type),
         status: 0,
       };
     case 'TurboKO':
       return {
-        activities: parseTurboKO(pdfPages.flat()),
+        activities: parseTurboKO(pdfPage.flat()),
         status: 0,
       };
     case 'TransferIn':
       return {
-        activities: parseTransferIn(pdfPages.flat()),
+        activities: parseTransferIn(pdfPage.flat()),
         status: 0,
       };
     default:

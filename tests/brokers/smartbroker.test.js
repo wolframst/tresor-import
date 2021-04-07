@@ -7,6 +7,7 @@ import {
   dividendSamples,
   transferInSamples,
   ignoredSamples,
+  multiPageSamples,
 } from './__mocks__/smartbroker';
 
 describe('Smartbroker broker test', () => {
@@ -374,6 +375,47 @@ describe('Smartbroker broker test', () => {
       ignoredSamples.forEach(pages => {
         expect(smartbroker.parsePages(pages).status).toEqual(7);
       });
+    });
+  });
+
+  describe('Parse multiple pages', () => {
+    it('should parse a document containing multiple pages', () => {
+      const parsed = smartbroker.parsePages(multiPageSamples[0]);
+
+      expect(parsed.activities.length).toEqual(4);
+      expect(parsed.activities[3].isin).toEqual('FR0000120271');
+      expect(parsed.activities[3].shares).toEqual(30);
+
+      expect(parsed.activities[2].isin).toEqual('IE00BMYDM794');
+      expect(parsed.activities[2].shares).toEqual(150);
+
+      expect(parsed.activities[1].isin).toEqual('US30231G1022');
+      expect(parsed.activities[1].shares).toEqual(30);
+
+      expect(parsed.activities[0].isin).toEqual('IE00BGV5VR99');
+      expect(parsed.activities[0].shares).toEqual(25);
+    });
+
+    it('should filter out ignored pages', () => {
+      const parsed = smartbroker.parsePages(multiPageSamples[0]);
+
+      expect(parsed.activities.length).toEqual(4);
+      expect(parsed.activities[3].isin).toEqual('FR0000120271');
+      expect(parsed.activities[2].isin).toEqual('IE00BMYDM794');
+      expect(parsed.activities[1].isin).toEqual('US30231G1022');
+      expect(parsed.activities[0].isin).toEqual('IE00BGV5VR99');
+    });
+
+    fit('should handel buy, sell, dividend in one document', () => {
+      const parsed = smartbroker.parsePages(multiPageSamples[2]);
+
+      expect(parsed.activities.length).toEqual(3);
+      expect(parsed.activities[2].isin).toEqual('FR0000120271');
+      expect(parsed.activities[2].type).toEqual('Buy');
+      expect(parsed.activities[1].isin).toEqual('DE000GF3VUV0');
+      expect(parsed.activities[1].type).toEqual('Sell');
+      expect(parsed.activities[0].isin).toEqual('US7561091049');
+      expect(parsed.activities[0].type).toEqual('Dividend');
     });
   });
 
