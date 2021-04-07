@@ -3,8 +3,6 @@ import {
   parseGermanNum,
   validateActivity,
   createActivityDateTime,
-  timeRegex,
-  findFirstRegexIndexInArray,
 } from '@/helper';
 // This broker also handles scalable capital
 
@@ -49,25 +47,6 @@ const findLineNumberByContent = (content, term, contains = true) =>
 
 const findLineNumberByContentStartsWith = (content, term) =>
   content.findIndex(line => line.startsWith(term));
-
-const findLineNumberByCurrentAndPreviousLineContent = (
-  content,
-  firstTerm,
-  secondTerm
-) => {
-  for (let lineNumber = 0; lineNumber < content.length; lineNumber++) {
-    const lineContent = content[lineNumber];
-    if (!lineContent.includes(firstTerm)) {
-      continue;
-    }
-
-    if (content[lineNumber + 1].includes(secondTerm)) {
-      return lineNumber + 1;
-    }
-  }
-
-  return undefined;
-};
 
 const findISIN = content => {
   return content[findLineNumberByContent(content, 'ISIN') + 5];
