@@ -437,7 +437,6 @@ describe('Broker: onvista', () => {
         },
       ]);
     });
-
   });
 
   describe('Account Statement', () => {

@@ -1,9 +1,7 @@
 import { findImplementation } from '@/index';
 import * as degiro from '../../src/brokers/degiro';
 import Big from 'big.js';
-import { transactionLog } from './__mocks__/degiro';
-
-const allSamples = transactionLog; //.concat(futureSamples);
+import { transactionLog, depotOverview, allSamples } from './__mocks__/degiro';
 
 describe('Broker: DEGIRO', () => {
   let consoleErrorSpy;
@@ -62,8 +60,10 @@ describe('Broker: DEGIRO', () => {
 
     test('Can the transactions be parsed from: buy_sell_and_call_transactions', () => {
       const activities = degiro.parsePages(transactionLog[1]).activities;
-
       expect(activities.length).toEqual(28);
+      expect(
+        activities.filter(activity => activity !== undefined).length
+      ).toEqual(28);
       expect(activities[5]).toEqual({
         broker: 'degiro',
         type: 'Buy',
@@ -273,10 +273,44 @@ describe('Broker: DEGIRO', () => {
         tax: 0,
       });
     });
-  });
-  
-  test('Can the transactions be parsed from: buy_only_transactions_it', () => {
+
+    test('Can parse 2020_transaction_log_1', () => {
       const activities = degiro.parsePages(transactionLog[7]).activities;
+      expect(activities.length).toEqual(24);
+      expect(
+        activities.filter(activity => activity !== undefined).length
+      ).toEqual(24);
+      expect(activities[0]).toEqual({
+        broker: 'degiro',
+        type: 'Buy',
+        date: '2020-11-23',
+        datetime: '2020-11-23T11:13:00.000Z',
+        isin: 'DE000KA5U0Z1',
+        company: 'CALL 16.12.21 ASMLHOLD 340',
+        shares: 307,
+        price: 5.2,
+        amount: 1596.4,
+        fee: 3.76,
+        tax: 0,
+      });
+
+      expect(activities[23]).toEqual({
+        broker: 'degiro',
+        type: 'Sell',
+        date: '2020-10-28',
+        datetime: '2020-10-28T08:57:00.000Z',
+        isin: 'DE000GF2AT89',
+        company: 'TUBULL O.ENDMASTERC.303,301861',
+        shares: 100,
+        price: 0.001,
+        amount: 0.1,
+        fee: 0,
+        tax: 0,
+      });
+    });
+
+    test('Can the transactions be parsed from: buy_only_transactions_it', () => {
+      const activities = degiro.parsePages(transactionLog[8]).activities;
 
       expect(activities.length).toEqual(5);
       expect(activities[0]).toEqual({
@@ -293,7 +327,63 @@ describe('Broker: DEGIRO', () => {
         tax: 0,
       });
     });
-  
+  });
+
+  describe('Validate Depot Overviews', () => {
+    test('Can parse a Depot Overview from 2021', () => {
+      const result = degiro.parsePages(depotOverview[0]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(6);
+      expect(result.activities[0]).toEqual({
+        broker: 'degiro',
+        type: 'TransferIn',
+        date: '2021-02-23',
+        datetime: '2021-02-23T' + result.activities[0].datetime.substr(11),
+        isin: 'GB00B18S7B29',
+        company: 'AFC ENERGY PLC   LS -,001',
+        shares: 17,
+        price: 0.67,
+        amount: 11.41,
+        fee: 0,
+        tax: 0,
+      });
+      expect(result.activities[5]).toEqual({
+        broker: 'degiro',
+        type: 'TransferIn',
+        date: '2021-02-23',
+        datetime: '2021-02-23T' + result.activities[0].datetime.substr(11),
+        isin: 'DE000WACK012',
+        company: 'WACKER NEUSON SE',
+        shares: 2,
+        price: 16.67,
+        amount: 33.34,
+        fee: 0,
+        tax: 0,
+      });
+    });
+
+    test('Can parse a Depot Overview from 2021', () => {
+      const result = degiro.parsePages(depotOverview[1]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(7);
+      expect(result.activities[6]).toEqual({
+        broker: 'degiro',
+        type: 'TransferIn',
+        date: '2021-03-22',
+        datetime: '2021-03-22T' + result.activities[0].datetime.substr(11),
+        isin: 'DE0007664039',
+        company: 'VOLKSWAGEN AG',
+        shares: 1,
+        price: 221.45,
+        amount: 221.45,
+        fee: 0,
+        tax: 0,
+      });
+    });
+  });
+
   beforeEach(() => {
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
   });
