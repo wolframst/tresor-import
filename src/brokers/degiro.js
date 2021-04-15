@@ -3,8 +3,9 @@ import {
   parseGermanNum,
   validateActivity,
   createActivityDateTime,
-  isinRegex,
+  findFirstIsinIndexInArray,
 } from '@/helper';
+import { findFirstRegexIndexInArray } from '../helper';
 
 const allowedDegiroCountries = [
   'www.degiro.de',
@@ -29,27 +30,11 @@ class zeroSharesTransaction extends Error {
   }
 }
 
-const isTransactionOverview = pdfPage => {
-  return pdfPage.some(
-    line =>
-      line.startsWith('Transaktionsübersicht von') ||
-      line.startsWith('Operazioni da')
-  );
-};
-
-const isAccountStatement = pdfPage => {
-  return pdfPage[0].some(
-    line =>
-      line.startsWith('Kontoauszug von') || line.startsWith('Estratto conto da')
-  );
-};
-
 const parseTransaction = (content, index, numberParser, offset) => {
-  // Is it possible that the transaction logs contains dividends?
+  let foreignCurrencyIndex;
+  const numberRegex = /^-?(\d+|\d.\d+)(,\d+)?$/;
 
-  let totalOffset = offset;
-  let isinIdx =
-    content.slice(index).findIndex(line => isinRegex.test(line)) + index;
+  let isinIdx = findFirstIsinIndexInArray(content, index);
   const company = content.slice(index + 2, isinIdx).join(' ');
   const isin = content[isinIdx];
 
@@ -57,64 +42,68 @@ const parseTransaction = (content, index, numberParser, offset) => {
   const hasEmptyLine = content[isinIdx + 2 + offset].indexOf(',') > -1;
   isinIdx = hasEmptyLine ? isinIdx - 1 : isinIdx;
 
-  const shares = Big(numberParser(content[isinIdx + 2 + offset]));
-  if (+shares === 0) {
+  const sharesIdx = findFirstRegexIndexInArray(content, numberRegex, isinIdx);
+  const transactionEndIdx = findFirstRegexIndexInArray(
+    content,
+    /(DEGIRO B\.V\. )|\d{2}-\d{2}-\d{4}/,
+    sharesIdx
+  );
+
+  // Sometimes the currency comes first; sometimes the value comes first
+  const amountOffset = numberRegex.test(content[sharesIdx + 1]) ? 5 : 6;
+  let activity = {
+    broker: 'degiro',
+    company,
+    isin,
+    shares: numberParser(content[sharesIdx]),
+    amount: Math.abs(numberParser(content[sharesIdx + amountOffset])),
+    tax: 0,
+    fee: 0,
+  };
+
+  if (activity.shares === 0) {
     throw new zeroSharesTransaction(
-      'Transaction with ISIN ' + isin + ' has no shares.'
+      'Transaction with ISIN ' + activity.isin + ' has no shares.'
     );
   }
-  const amount = Big(numberParser(content[isinIdx + 8])).abs();
+
   // There is the case where the amount is 0, might be a transfer out or a knockout certificate
   const currency = content[isinIdx + 3 + offset * 2];
   const baseCurrency = content[isinIdx + 7 + offset * 2];
 
-  let fxRate = undefined;
   if (currency !== baseCurrency) {
-    fxRate = numberParser(content[isinIdx + 9 + offset]);
+    activity.foreignCurrency = currency;
+    activity.fxRate = numberParser(content[isinIdx + 9 + offset]);
     // For foreign currency we need to go one line ahead for the following fields.
-    totalOffset = 1;
+    foreignCurrencyIndex = 1;
   } else {
-    totalOffset = 0;
+    foreignCurrencyIndex = 0;
   }
 
-  const type = shares > 0 ? 'Buy' : 'Sell';
-  const price = amount.div(shares.abs());
-  let tax = 0;
-  let fee = 0;
-  if (type === 'Buy') {
-    fee = Math.abs(numberParser(content[isinIdx + totalOffset + 10]));
-  } else if (type === 'Sell') {
-    tax = Math.abs(numberParser(content[isinIdx + totalOffset + 10]));
+  activity.type = activity.shares > 0 ? 'Buy' : 'Sell';
+  activity.price = +Big(activity.amount).div(activity.shares).abs();
+  if (activity.type === 'Buy') {
+    activity.fee = Math.abs(
+      numberParser(content[isinIdx + foreignCurrencyIndex + 10])
+    );
+  } else if (activity.type === 'Sell') {
+    if (transactionEndIdx - sharesIdx >= 10) {
+      activity.tax = Math.abs(
+        numberParser(content[isinIdx + foreignCurrencyIndex + 10])
+      );
+    } else {
+      activity.tax = 0;
+    }
+    activity.shares = Math.abs(activity.shares);
   }
 
-  const [parsedDate, parsedDateTime] = createActivityDateTime(
+  [activity.date, activity.datetime] = createActivityDateTime(
     content[index],
     content[index + 1],
     'dd-MM-yyyy',
     'dd-MM-yyyy HH:mm'
   );
 
-  const activity = {
-    broker: 'degiro',
-    date: parsedDate,
-    datetime: parsedDateTime,
-    company,
-    isin,
-    shares: +shares.abs(),
-    amount: +amount,
-    type,
-    price: +price,
-    fee,
-    tax,
-  };
-
-  if (fxRate !== undefined) {
-    activity.fxRate = fxRate;
-  }
-
-  if (currency !== baseCurrency) {
-    activity.foreignCurrency = currency;
-  }
   return validateActivity(activity);
 };
 
@@ -166,32 +155,106 @@ const parseTransactionLog = pdfPages => {
   return activities;
 };
 
-export const canParseDocument = (pages, extension) => {
-  const firstPageContent = pages[0];
+const parseDepotStatement = pdfPages => {
+  const flattendPages = pdfPages.flat();
+  const dateline =
+    flattendPages[
+      flattendPages.findIndex(
+        line =>
+          line.startsWith('Portfolioübersicht per ') ||
+          line.startsWith('Panoramica Portafoglio al ')
+      )
+    ];
+
+  const dateLineSplitted = dateline.split(/\s+/);
+  const [date, datetime] = createActivityDateTime(
+    dateLineSplitted[dateLineSplitted.length - 1],
+    undefined,
+    'dd-MM-yyyy'
+  );
+  let activities = [];
+  let isinIdx = findFirstIsinIndexInArray(flattendPages);
+  while (isinIdx >= 0) {
+    const activity = {
+      broker: 'degiro',
+      type: 'TransferIn',
+      isin: flattendPages[isinIdx],
+      company: flattendPages[isinIdx - 1],
+      date,
+      datetime,
+      shares: parseGermanNum(flattendPages[isinIdx + 1]),
+      price: parseGermanNum(flattendPages[isinIdx + 2]),
+      amount: parseGermanNum(flattendPages[isinIdx + 4]),
+      tax: 0,
+      fee: 0,
+    };
+    if (validateActivity(activity)) {
+      activities.push(activity);
+    } else {
+      return undefined;
+    }
+
+    isinIdx = findFirstIsinIndexInArray(flattendPages, isinIdx + 1);
+  }
+  return activities;
+};
+
+const getDocumentType = pdfPages => {
+  if (pdfPages[0].some(line => line.startsWith('Kontoauszug von'))) {
+    return 'AccountStatement';
+  } else if (
+    pdfPages[0].some(
+      line =>
+        line.startsWith('Transaktionsübersicht von') ||
+        line.startsWith('Operazioni da')
+    )
+  ) {
+    return 'TransactionLog';
+  } else if (
+    pdfPages[0].some(
+      line =>
+        line.startsWith('Portfolioübersicht') ||
+        line.startsWith('Panoramica Portafoglio')
+    )
+  ) {
+    return 'DepotOverview';
+  }
+};
+
+export const canParseDocument = (pdfPages, extension) => {
   return (
     extension === 'pdf' &&
-    firstPageContent.some(line => allowedDegiroCountries.includes(line)) &&
-    isTransactionOverview(firstPageContent)
+    pdfPages[0].some(line => allowedDegiroCountries.includes(line)) &&
+    getDocumentType(pdfPages) !== undefined
   );
 };
 
 export const parsePages = pdfPages => {
+  const documentType = getDocumentType(pdfPages);
   let activities;
+  switch (documentType) {
+    // This type of file contains Dividends and other information. Only dividends are processed. This is not implemented
+    // yet as the dividends lack the information how many shares are in the account
+    case 'AccountStatement':
+      return {
+        activities: [],
+        status: 5,
+      };
 
-  // This type of file contains Buy and Sell operations
-  if (isTransactionOverview(pdfPages[0])) {
-    activities = parseTransactionLog(pdfPages);
+    // This type of file contains Buy and Sell operations
+    case 'TransactionLog': {
+      activities = parseTransactionLog(pdfPages);
+      break;
+    }
+
+    case 'DepotOverview': {
+      activities = parseDepotStatement(pdfPages);
+      break;
+    }
   }
-  // This type of file contains Dividends and other information. Only dividends are processed. This is not implemented
-  // yet as the dividends lack the information how many shares are in the account
-  else if (isAccountStatement(pdfPages[0])) {
-    return {
-      undefined,
-      status: 5,
-    };
-  }
+
   return {
     activities,
-    status: 0,
+    status: activities === undefined ? 1 : 0,
   };
 };

@@ -38,7 +38,7 @@ export const portfolioOverviewSamples = [
 
 export const ignoredSamples = [
   require('./ignored/2020_cost_information.json'),
-  require('./ignored/2020_multiple_dividend_cancellations.json')
+  require('./ignored/2020_multiple_dividend_cancellations.json'),
 ];
 
 export const allSamples = buySamples.concat(

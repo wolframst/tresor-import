@@ -480,7 +480,6 @@ export const canParseDocument = (pages, extension) => {
           joinedContent.toLowerCase().includes('onvista')
         )
       ) &&
-
       (isBuy(firstPageContent) ||
         isDividend(firstPageContent) ||
         isSell(firstPageContent))) ||
