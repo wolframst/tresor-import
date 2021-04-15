@@ -1,6 +1,6 @@
 {
   "name": "@rentablo/pdf-import",
-  "version": "2.9.5",
+  "version": "2.9.7",
   "description": "Creates Tresor One activities from PDF statements of brokers",
   "files": [
     "dist"
