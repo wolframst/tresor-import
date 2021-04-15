@@ -17,6 +17,7 @@ import * as smartbroker from './smartbroker';
 import * as traderepublic from './traderepublic';
 import * as unioninvest from './unioninvest';
 import * as sbroker from './sbroker';
+import * as volksbank from './volksbank';
 
 export {
   _1822direkt,
@@ -38,4 +39,5 @@ export {
   traderepublic,
   unioninvest,
   sbroker,
+  volksbank,
 };
