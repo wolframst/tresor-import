@@ -151,15 +151,15 @@ const findTax = content => {
     );
   }
 
-  // const lineWithChurchTax = findLineNumberByContentStartsWith(
-  //   content,
-  //   'Kirchensteuer'
-  // );
-  // if (lineWithChurchTax > -1) {
-  //   totalTax = totalTax.plus(
-  //     Big(parseGermanNum(content[lineWithChurchTax + 1].split(' ')[0]))
-  //   );
-  // }
+  const lineWithChurchTax = findLineNumberByContentStartsWith(
+    content,
+    'Kirchensteuer'
+  );
+  if (lineWithChurchTax > -1) {
+    totalTax = totalTax.plus(
+      Big(parseGermanNum(content[lineWithChurchTax + 1].split(' ')[0]))
+    );
+  }
 
   const lineWithSolidarityTax = findLineNumberByContentStartsWith(
     content,

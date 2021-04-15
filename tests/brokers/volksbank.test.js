@@ -74,7 +74,7 @@ describe('Broker: volksbank', () => {
   });
 
   describe('Validate dividends', () => {
-    it('Can the etf dividend be parsed from the document', () => {
+    it('parses a dividend in USD', () => {
       const activities = volksbank.parsePages(dividendSamples[0]).activities;
 
       expect(activities.length).toEqual(1);
@@ -92,6 +92,27 @@ describe('Broker: volksbank', () => {
         amount: 80.8,
         fee: 0,
         tax: 20.646248,
+      });
+    });
+
+    it('parses a dividend in EUR', () => {
+      const activities = volksbank.parsePages(dividendSamples[1]).activities;
+
+      expect(activities.length).toEqual(1);
+      expect(activities[0]).toEqual({
+        broker: 'volksbank',
+        type: 'Dividend',
+        date: '2020-05-11',
+        datetime: '2020-05-11T' + activities[0].datetime.substring(11),
+        isin: 'DE0008404005',
+        company: 'ALLIANZ SE VINK.NAMENS-AKTIEN O.N.',
+        shares: 130,
+        price: 9.6,
+        currency: 'EUR',
+        fxRate: 1,
+        amount: 1248.0,
+        fee: 0,
+        tax: 173.59, // 152.94 + 8.42 + 12.23
       });
     });
   });
