@@ -208,6 +208,29 @@ describe('Broker: Deutsche Bank', () => {
         fxRate: 1.1138,
       });
     });
+
+    it('Correctly detects two-page dividend for Automatic Data Processing in USD', () => {
+      const result = deutschebank.parsePages(dividendSamples[8]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-01-06',
+        datetime: '2021-01-06T' + result.activities[0].datetime.substr(11),
+        isin: 'US0530151036',
+        wkn: '850347',
+        company: 'AUTOMATIC DATA PROCESSING INC.RG.SH. DL -,10',
+        shares: 942,
+        price: 0.7534076433121019, // 709.71 / 942,
+        amount: 709.71,
+        fee: 0,
+        tax: 185.91, // 106.46 + 69.4 + 3.81 + 6.24,
+        foreignCurrency: 'USD',
+        fxRate: 1.2344,
+      });
+    });
   });
 
   describe('Validate Depot Status', () => {

@@ -11,6 +11,7 @@ export const dividendSamples = [
   require('./dividends/2021-02-22-ibb-kupon.json'),
   require('./dividends/2021-03-09-johnson-and-johnson.json'),
   require('./dividends/2021-03-08-novartis.json'),
+  require('./dividends/2021-01-01-automatic-data.json'),
 ];
 
 export const depotStatusSamples = [

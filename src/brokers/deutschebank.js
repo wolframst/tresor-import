@@ -205,6 +205,10 @@ const hasAmountInEur = content => {
     : false;
 };
 
+const totalDividendOffset = (content, currentOffset) => {
+  return content[currentOffset] === 'EUR' ? currentOffset - 1 : currentOffset;
+};
+
 const findDividendTax = (content, fxRate, foreignCurrency = 'EUR') => {
   let totalTax = Big(0);
   const inFx = fxRate && !hasAmountInEur(content);
@@ -214,32 +218,51 @@ const findDividendTax = (content, fxRate, foreignCurrency = 'EUR') => {
   if (withholdingTaxIdx >= 0) {
     const currOffset =
       content[withholdingTaxIdx - 2] === foreignCurrency ? 1 : 0;
+    const totalOffset = totalDividendOffset(
+      content,
+      withholdingTaxIdx - offset - 1 - currOffset
+    );
     totalTax = totalTax.plus(
-      parseGermanNum(
-        content[withholdingTaxIdx - offset - 1 - currOffset].split(/\s+/)[1]
-      )
+      parseGermanNum(content[totalOffset].split(/\s+/)[1])
     );
   }
   const solidarityTaxIdx = content.indexOf('Solidaritätszuschlag');
   if (solidarityTaxIdx >= 0) {
     const currOffset =
       content[solidarityTaxIdx - 1] === foreignCurrency ? 1 : 0;
+    const totalOffset = totalDividendOffset(
+      content,
+      solidarityTaxIdx - offset - currOffset
+    );
     totalTax = totalTax.plus(
-      parseGermanNum(
-        content[solidarityTaxIdx - offset - currOffset].split(/\s+/)[1]
-      )
+      parseGermanNum(content[totalOffset].split(/\s+/)[1])
     );
   }
   const capitalIncomeTax = content.indexOf('Kapitalertragsteuer');
   if (capitalIncomeTax >= 0) {
     const currOffset =
       content[capitalIncomeTax - 1] === foreignCurrency ? 1 : 0;
+    const totalOffset = totalDividendOffset(
+      content,
+      capitalIncomeTax - offset - currOffset
+    );
     totalTax = totalTax.plus(
-      parseGermanNum(
-        content[capitalIncomeTax - offset - currOffset].split(/\s+/)[1]
-      )
+      parseGermanNum(content[totalOffset].split(/\s+/)[1])
     );
   }
+
+  const curchTax = content.indexOf('Kirchensteuer');
+  if (curchTax >= 0) {
+    const currOffset = content[curchTax - 1] === foreignCurrency ? 1 : 0;
+    const totalOffset = totalDividendOffset(
+      content,
+      curchTax - offset - currOffset
+    );
+    totalTax = totalTax.plus(
+      parseGermanNum(content[totalOffset].split(/\s+/)[1])
+    );
+  }
+
   return inFx ? +totalTax / fxRate : +totalTax;
 };
 
