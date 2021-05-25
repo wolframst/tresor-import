@@ -5,6 +5,9 @@ export const sellSamples = [];
 export const dividendSamples = [
   require('./dividends/2020_agnc_invest.json'),
   require('./dividends/2020_johnson_johnson.json'),
+  require('./dividends/2021-05-07-medistim.json'),
+  require('./dividends/2021-05-10-allianz.json'),
+  require('./dividends/2021-05-06-x-trackers-euro-stoxx-50.json'),
 ];
 
 export const depotStatusSamples = [

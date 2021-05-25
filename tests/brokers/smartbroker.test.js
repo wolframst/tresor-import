@@ -406,7 +406,7 @@ describe('Smartbroker broker test', () => {
       expect(parsed.activities[0].isin).toEqual('IE00BGV5VR99');
     });
 
-    fit('should handel buy, sell, dividend in one document', () => {
+    it('should handel buy, sell, dividend in one document', () => {
       const parsed = smartbroker.parsePages(multiPageSamples[2]);
 
       expect(parsed.activities.length).toEqual(3);

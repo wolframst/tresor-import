@@ -6,8 +6,9 @@ import {
   validateActivity,
   findNextLineIndexByRegex,
   findFirstSearchtermIndexInArray,
-  findPreviousRegexMatchIdx
+  findPreviousRegexMatchIdx,
 } from '@/helper';
+import { isinRegex } from '../helper';
 
 const idStringLong =
   'Bitte beachten Sie auch unsere weiteren Erläuterungen zu diesem Report, die Sie auf beiliegender Anlage finden! Bei Fragen sprechen Sie bitte Ihren Berater an.';
@@ -116,19 +117,33 @@ const parseDepotStatus = content => {
 const findDividendIsin = content => {
   const isinIdx = content.indexOf('ISIN');
   if (isinIdx >= 0) {
+    if (isIsinSplitOverTwoLines(content, isinIdx)) {
+      return content[isinIdx + 4] + content[isinIdx + 5];
+    }
     return content[findFirstIsinIndexInArray(content, isinIdx)];
   }
+};
+
+const isIsinSplitOverTwoLines = (content, isinIdx) => {
+  return isinRegex.test(content[isinIdx + 4] + content[isinIdx + 5]);
 };
 
 const findDividendWKN = content => {
   const isinIdx = content.indexOf('ISIN');
   if (isinIdx >= 0) {
+    if (isIsinSplitOverTwoLines(content, isinIdx)) {
+      return content[isinIdx + 6];
+    }
     return content[findFirstIsinIndexInArray(content, isinIdx) + 1];
   }
 };
 
 const findDividendCompany = content => {
-  const startCompany = content.indexOf('Stück') + 4;
+  const isinIdx = content.indexOf('ISIN');
+  const startCompany =
+    content.indexOf('Stück') +
+    4 +
+    (isinIdx > 0 && isIsinSplitOverTwoLines(content, isinIdx) ? 1 : 0);
   const endCompany = content.indexOf('Zahlbar') - 1;
   return content.slice(startCompany, endCompany).join(' ');
 };
@@ -157,33 +172,49 @@ const findDividendForeignInformation = content => {
   return [undefined, undefined];
 };
 
-const findDividendAmount = (content, fxRate) => {
+const findDividendAmount = (content, fxRate, foreignCurrency = 'EUR') => {
   const amountIdx = content.indexOf('Bruttoertrag');
   if (amountIdx >= 0) {
-    const offset = fxRate === undefined ? 1 : 2;
+    const currOffset = content[amountIdx - 1] === foreignCurrency ? 2 : 1;
+    const offset = currOffset * (fxRate === undefined ? 1 : 2);
+    content[amountIdx - offset].split(/\s+/)[0];
+
     return parseGermanNum(content[amountIdx - offset].split(/\s+/)[0]);
   }
 };
 
-const findDividendTax = (content, fxRate) => {
+const findDividendTax = (content, fxRate, foreignCurrency = 'EUR') => {
   let totalTax = Big(0);
   const offset = fxRate === undefined ? 1 : 2;
   const withholdingTaxIdx = content.indexOf('% Ausländische');
+
   if (withholdingTaxIdx >= 0) {
+    const currOffset =
+      content[withholdingTaxIdx - 2] === foreignCurrency ? 1 : 0;
     totalTax = totalTax.plus(
-      parseGermanNum(content[withholdingTaxIdx - offset - 1].split(/\s+/)[1])
+      parseGermanNum(
+        content[withholdingTaxIdx - offset - 1 - currOffset].split(/\s+/)[1]
+      )
     );
   }
   const solidarityTaxIdx = content.indexOf('Solidaritätszuschlag');
   if (solidarityTaxIdx >= 0) {
+    const currOffset =
+      content[solidarityTaxIdx - 1] === foreignCurrency ? 1 : 0;
     totalTax = totalTax.plus(
-      parseGermanNum(content[solidarityTaxIdx - offset].split(/\s+/)[1])
+      parseGermanNum(
+        content[solidarityTaxIdx - offset - currOffset].split(/\s+/)[1]
+      )
     );
   }
   const capitalIncomeTax = content.indexOf('Kapitalertragsteuer');
   if (capitalIncomeTax >= 0) {
+    const currOffset =
+      content[capitalIncomeTax - 1] === foreignCurrency ? 1 : 0;
     totalTax = totalTax.plus(
-      parseGermanNum(content[capitalIncomeTax - offset].split(/\s+/)[1])
+      parseGermanNum(
+        content[capitalIncomeTax - offset - currOffset].split(/\s+/)[1]
+      )
     );
   }
   return +totalTax;
@@ -222,10 +253,15 @@ const parseDividend = (pagesFlat, activityType) => {
     findDividendDate(pagesFlat)
   );
   activity.shares = findDividendShares(pagesFlat);
-  activity.amount = findDividendAmount(pagesFlat, activity.fxRate);
+  activity.amount = findDividendAmount(
+    pagesFlat,
+    activity.fxRate,
+    foreignCurrency
+  );
+
   activity.price = +Big(activity.amount).div(activity.shares);
   activity.fee = 0;
-  activity.tax = findDividendTax(pagesFlat, activity.fxRate);
+  activity.tax = findDividendTax(pagesFlat, activity.fxRate, foreignCurrency);
   return activity;
 };
 

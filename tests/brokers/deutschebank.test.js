@@ -74,6 +74,71 @@ describe('Broker: Deutsche Bank', () => {
         fxRate: 1.2161,
       });
     });
+
+    it('Correctly detects exchange rate from medistim in NOK', () => {
+      const result = deutschebank.parsePages(dividendSamples[2]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-05-11',
+        datetime: '2021-05-11T' + result.activities[0].datetime.substr(11),
+        isin: 'NO0010159684',
+        wkn: 'A0D9B1',
+        company: 'MEDISTIM ASA NAVNE-AKSJER NK -,25',
+        shares: 430,
+        price: 0.2978372093023256, // 128.07 / 430,
+        amount: 128.07,
+        fee: 0,
+        tax: 65.8, // 32.02 + 32.02 + 1.76,
+        foreignCurrency: 'NOK',
+        fxRate: 10.0723,
+      });
+    });
+
+    it('Correctly detects dividend for allianz in EUR', () => {
+      const result = deutschebank.parsePages(dividendSamples[3]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-05-10',
+        datetime: '2021-05-10T' + result.activities[0].datetime.substr(11),
+        isin: 'DE0008404005',
+        wkn: '840400',
+        company: 'ALLIANZ SE VINK.NAMENS-AKTIEN O.N.',
+        shares: 42,
+        price: 403.2 / 42, // 403.20 / 42,
+        amount: 403.2,
+        fee: 0,
+        tax: 106.34, // 100.8 + 5.54
+      });
+    });
+
+    it('Correctly detects dividend for XTRACKERS EURO STOXX 50 in EUR', () => {
+      const result = deutschebank.parsePages(dividendSamples[4]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-05-06',
+        datetime: '2021-05-06T' + result.activities[0].datetime.substr(11),
+        isin: 'LU0274211217',
+        wkn: 'DBX1EU',
+        company: 'XTRACKERS EURO STOXX 50 INH.ANT . 1D O.N.',
+        shares: 205,
+        price: 0.7386829268292683,
+        amount: 151.43,
+        fee: 0,
+        tax: 27.95, // 26.5 + 1.45
+      });
+    });
   });
 
   describe('Validate Depot Status', () => {
