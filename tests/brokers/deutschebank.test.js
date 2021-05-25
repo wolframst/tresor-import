@@ -74,6 +74,140 @@ describe('Broker: Deutsche Bank', () => {
         fxRate: 1.2161,
       });
     });
+
+    it('Correctly detects exchange rate from medistim in NOK', () => {
+      const result = deutschebank.parsePages(dividendSamples[2]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-05-11',
+        datetime: '2021-05-11T' + result.activities[0].datetime.substr(11),
+        isin: 'NO0010159684',
+        wkn: 'A0D9B1',
+        company: 'MEDISTIM ASA NAVNE-AKSJER NK -,25',
+        shares: 430,
+        price: 0.2978372093023256, // 128.07 / 430,
+        amount: 128.07,
+        fee: 0,
+        tax: 65.8, // 32.02 + 32.02 + 1.76,
+        foreignCurrency: 'NOK',
+        fxRate: 10.0723,
+      });
+    });
+
+    it('Correctly detects dividend for allianz in EUR', () => {
+      const result = deutschebank.parsePages(dividendSamples[3]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-05-10',
+        datetime: '2021-05-10T' + result.activities[0].datetime.substr(11),
+        isin: 'DE0008404005',
+        wkn: '840400',
+        company: 'ALLIANZ SE VINK.NAMENS-AKTIEN O.N.',
+        shares: 42,
+        price: 403.2 / 42, // 403.20 / 42,
+        amount: 403.2,
+        fee: 0,
+        tax: 106.34, // 100.8 + 5.54
+      });
+    });
+
+    it('Correctly detects dividend for XTRACKERS EURO STOXX 50 in EUR', () => {
+      const result = deutschebank.parsePages(dividendSamples[4]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-05-06',
+        datetime: '2021-05-06T' + result.activities[0].datetime.substr(11),
+        isin: 'LU0274211217',
+        wkn: 'DBX1EU',
+        company: 'XTRACKERS EURO STOXX 50 INH.ANT . 1D O.N.',
+        shares: 205,
+        price: 0.7386829268292683,
+        amount: 151.43,
+        fee: 0,
+        tax: 27.95, // 26.5 + 1.45
+      });
+    });
+
+    it('Correctly detects kupon for IBB bond in AUD', () => {
+      const result = deutschebank.parsePages(dividendSamples[5]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-02-24',
+        datetime: '2021-02-24T' + result.activities[0].datetime.substr(11),
+        isin: 'AU3CB0198034',
+        wkn: 'A1G803',
+        company: '5% EUROPEAN INVESTMENT BANK MTN.12 22.F/A 08.22',
+        shares: 1,
+        price: 193.94,
+        amount: 193.94,
+        fee: 0,
+        tax: 51.15, // 48.49 + 2.66
+        foreignCurrency: 'AUD',
+        fxRate: 1.5469,
+      });
+    });
+
+    it('Correctly detects two-page dividend for Johnson and Johnson in USD', () => {
+      const result = deutschebank.parsePages(dividendSamples[6]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-03-11',
+        datetime: '2021-03-11T' + result.activities[0].datetime.substr(11),
+        isin: 'US4781601046',
+        wkn: '853260',
+        company: 'JOHNSON & JOHNSON REGISTERED SHARES DL 1',
+        shares: 250,
+        price: 0.84484, // 1.01 / 1.1955
+        amount: 211.21,
+        fee: 0,
+        tax: 53.97, // 31.69 + 21.12 + 1.16
+        foreignCurrency: 'USD',
+        fxRate: 1.1955,
+      });
+    });
+
+    it('Correctly detects two-page dividend for Novartis in CHF', () => {
+      const result = deutschebank.parsePages(dividendSamples[7]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-03-08',
+        datetime: '2021-03-08T' + result.activities[0].datetime.substr(11),
+        isin: 'CH0012005267',
+        wkn: '904278',
+        company: 'NOVARTIS AG NAMENS-AKTIEN SF 0,50',
+        shares: 71,
+        price: 3 / 1.1138, // 1.01 / 1.1955
+        amount: 213 / 1.1138,
+        fee: 0,
+        tax: (74.55 + 21.3 + 1.17) / 1.1138,
+        foreignCurrency: 'CHF',
+        fxRate: 1.1138,
+      });
+    });
   });
 
   describe('Validate Depot Status', () => {

@@ -6,8 +6,9 @@ import {
   validateActivity,
   findNextLineIndexByRegex,
   findFirstSearchtermIndexInArray,
-  findPreviousRegexMatchIdx
+  findPreviousRegexMatchIdx,
 } from '@/helper';
+import { isinRegex } from '../helper';
 
 const idStringLong =
   'Bitte beachten Sie auch unsere weiteren Erläuterungen zu diesem Report, die Sie auf beiliegender Anlage finden! Bei Fragen sprechen Sie bitte Ihren Berater an.';
@@ -65,6 +66,8 @@ const parseTransactionLog = content => {
   return activities;
 };
 
+const isBond = content => content.includes('Kupongutschrift');
+
 /////////////////////////////////////////////////
 // Depot Status parsing
 /////////////////////////////////////////////////
@@ -116,19 +119,34 @@ const parseDepotStatus = content => {
 const findDividendIsin = content => {
   const isinIdx = content.indexOf('ISIN');
   if (isinIdx >= 0) {
+    if (isIsinSplitOverTwoLines(content, isinIdx)) {
+      return content[isinIdx + 4] + content[isinIdx + 5];
+    }
     return content[findFirstIsinIndexInArray(content, isinIdx)];
   }
+};
+
+const isIsinSplitOverTwoLines = (content, isinIdx) => {
+  return isinRegex.test(content[isinIdx + 4] + content[isinIdx + 5]);
 };
 
 const findDividendWKN = content => {
   const isinIdx = content.indexOf('ISIN');
   if (isinIdx >= 0) {
+    if (isIsinSplitOverTwoLines(content, isinIdx)) {
+      return content[isinIdx + 6];
+    }
     return content[findFirstIsinIndexInArray(content, isinIdx) + 1];
   }
 };
 
 const findDividendCompany = content => {
-  const startCompany = content.indexOf('Stück') + 4;
+  const isinIdx = content.indexOf('ISIN');
+  const keyword = isBond(content) ? 'Nominal' : 'Stück';
+  const startCompany =
+    content.indexOf(keyword) +
+    4 +
+    (isinIdx > 0 && isIsinSplitOverTwoLines(content, isinIdx) ? 1 : 0);
   const endCompany = content.indexOf('Zahlbar') - 1;
   return content.slice(startCompany, endCompany).join(' ');
 };
@@ -157,43 +175,80 @@ const findDividendForeignInformation = content => {
   return [undefined, undefined];
 };
 
-const findDividendAmount = (content, fxRate) => {
+const findDividendAmount = (content, fxRate, foreignCurrency = 'EUR') => {
   const amountIdx = content.indexOf('Bruttoertrag');
+  let fxRateMultiplier = 1;
   if (amountIdx >= 0) {
-    const offset = fxRate === undefined ? 1 : 2;
-    return parseGermanNum(content[amountIdx - offset].split(/\s+/)[0]);
+    const currOffset = content[amountIdx - 1] === foreignCurrency ? 1 : 0;
+    let offset = currOffset + (fxRate === undefined ? 1 : 2);
+    if (content[amountIdx - offset] === 'EUR') {
+      offset += 1;
+    }
+    if (fxRate && !hasAmountInEur(content)) {
+      offset -= 1;
+      fxRateMultiplier = fxRate ? 1 / fxRate : 1;
+    }
+    content[amountIdx - offset].split(/\s+/)[0];
+
+    return (
+      parseGermanNum(content[amountIdx - offset].split(/\s+/)[0]) *
+      fxRateMultiplier
+    );
   }
 };
 
-const findDividendTax = (content, fxRate) => {
+const hasAmountInEur = content => {
+  const amountIdx = content.indexOf('Bruttoertrag');
+  return amountIdx > 0
+    ? content[amountIdx + 1].includes('EUR') ||
+        content[amountIdx + 2].includes('EUR')
+    : false;
+};
+
+const findDividendTax = (content, fxRate, foreignCurrency = 'EUR') => {
   let totalTax = Big(0);
-  const offset = fxRate === undefined ? 1 : 2;
+  const inFx = fxRate && !hasAmountInEur(content);
+  const offset = inFx ? 1 : fxRate === undefined ? 1 : 2;
   const withholdingTaxIdx = content.indexOf('% Ausländische');
+
   if (withholdingTaxIdx >= 0) {
+    const currOffset =
+      content[withholdingTaxIdx - 2] === foreignCurrency ? 1 : 0;
     totalTax = totalTax.plus(
-      parseGermanNum(content[withholdingTaxIdx - offset - 1].split(/\s+/)[1])
+      parseGermanNum(
+        content[withholdingTaxIdx - offset - 1 - currOffset].split(/\s+/)[1]
+      )
     );
   }
   const solidarityTaxIdx = content.indexOf('Solidaritätszuschlag');
   if (solidarityTaxIdx >= 0) {
+    const currOffset =
+      content[solidarityTaxIdx - 1] === foreignCurrency ? 1 : 0;
     totalTax = totalTax.plus(
-      parseGermanNum(content[solidarityTaxIdx - offset].split(/\s+/)[1])
+      parseGermanNum(
+        content[solidarityTaxIdx - offset - currOffset].split(/\s+/)[1]
+      )
     );
   }
   const capitalIncomeTax = content.indexOf('Kapitalertragsteuer');
   if (capitalIncomeTax >= 0) {
+    const currOffset =
+      content[capitalIncomeTax - 1] === foreignCurrency ? 1 : 0;
     totalTax = totalTax.plus(
-      parseGermanNum(content[capitalIncomeTax - offset].split(/\s+/)[1])
+      parseGermanNum(
+        content[capitalIncomeTax - offset - currOffset].split(/\s+/)[1]
+      )
     );
   }
-  return +totalTax;
+  return inFx ? +totalTax / fxRate : +totalTax;
 };
 
 const getDocumentType = content => {
   // It seems the pdf for Deutsche Bank Buy transactions can't be parsed by pdfjs (see case unsupported)
   if (
     content.includes('Dividendengutschrift') ||
-    content.includes('Ertragsgutschrift')
+    content.includes('Ertragsgutschrift') ||
+    content.includes('Kupongutschrift')
   ) {
     return 'Dividend';
   } else if (content.includes('_itte überprüfen')) {
@@ -221,11 +276,17 @@ const parseDividend = (pagesFlat, activityType) => {
   [activity.date, activity.datetime] = createActivityDateTime(
     findDividendDate(pagesFlat)
   );
-  activity.shares = findDividendShares(pagesFlat);
-  activity.amount = findDividendAmount(pagesFlat, activity.fxRate);
+  activity.shares = isBond(pagesFlat) ? 1 : findDividendShares(pagesFlat);
+
+  activity.amount = findDividendAmount(
+    pagesFlat,
+    activity.fxRate,
+    foreignCurrency
+  );
+
   activity.price = +Big(activity.amount).div(activity.shares);
   activity.fee = 0;
-  activity.tax = findDividendTax(pagesFlat, activity.fxRate);
+  activity.tax = findDividendTax(pagesFlat, activity.fxRate, foreignCurrency);
   return activity;
 };
 
