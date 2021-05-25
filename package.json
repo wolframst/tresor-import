@@ -1,6 +1,6 @@
 {
   "name": "@rentablo/pdf-import",
-  "version": "2.9.9",
+  "version": "2.9.10",
   "description": "Creates Rentablo activities from PDF statements of brokers",
   "files": [
     "dist"
