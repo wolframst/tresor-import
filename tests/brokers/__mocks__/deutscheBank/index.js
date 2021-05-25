@@ -8,6 +8,9 @@ export const dividendSamples = [
   require('./dividends/2021-05-07-medistim.json'),
   require('./dividends/2021-05-10-allianz.json'),
   require('./dividends/2021-05-06-x-trackers-euro-stoxx-50.json'),
+  require('./dividends/2021-02-22-ibb-kupon.json'),
+  require('./dividends/2021-03-09-johnson-and-johnson.json'),
+  require('./dividends/2021-03-08-novartis.json'),
 ];
 
 export const depotStatusSamples = [

@@ -139,6 +139,75 @@ describe('Broker: Deutsche Bank', () => {
         tax: 27.95, // 26.5 + 1.45
       });
     });
+
+    it('Correctly detects kupon for IBB bond in AUD', () => {
+      const result = deutschebank.parsePages(dividendSamples[5]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-02-24',
+        datetime: '2021-02-24T' + result.activities[0].datetime.substr(11),
+        isin: 'AU3CB0198034',
+        wkn: 'A1G803',
+        company: '5% EUROPEAN INVESTMENT BANK MTN.12 22.F/A 08.22',
+        shares: 1,
+        price: 193.94,
+        amount: 193.94,
+        fee: 0,
+        tax: 51.15, // 48.49 + 2.66
+        foreignCurrency: 'AUD',
+        fxRate: 1.5469,
+      });
+    });
+
+    it('Correctly detects two-page dividend for Johnson and Johnson in USD', () => {
+      const result = deutschebank.parsePages(dividendSamples[6]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-03-11',
+        datetime: '2021-03-11T' + result.activities[0].datetime.substr(11),
+        isin: 'US4781601046',
+        wkn: '853260',
+        company: 'JOHNSON & JOHNSON REGISTERED SHARES DL 1',
+        shares: 250,
+        price: 0.84484, // 1.01 / 1.1955
+        amount: 211.21,
+        fee: 0,
+        tax: 53.97, // 31.69 + 21.12 + 1.16
+        foreignCurrency: 'USD',
+        fxRate: 1.1955,
+      });
+    });
+
+    it('Correctly detects two-page dividend for Novartis in CHF', () => {
+      const result = deutschebank.parsePages(dividendSamples[7]);
+
+      expect(result.status).toEqual(0);
+      expect(result.activities.length).toEqual(1);
+      expect(result.activities[0]).toEqual({
+        broker: 'deutschebank',
+        type: 'Dividend',
+        date: '2021-03-08',
+        datetime: '2021-03-08T' + result.activities[0].datetime.substr(11),
+        isin: 'CH0012005267',
+        wkn: '904278',
+        company: 'NOVARTIS AG NAMENS-AKTIEN SF 0,50',
+        shares: 71,
+        price: 3 / 1.1138, // 1.01 / 1.1955
+        amount: 213 / 1.1138,
+        fee: 0,
+        tax: (74.55 + 21.3 + 1.17) / 1.1138,
+        foreignCurrency: 'CHF',
+        fxRate: 1.1138,
+      });
+    });
   });
 
   describe('Validate Depot Status', () => {

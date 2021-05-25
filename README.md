@@ -1,6 +1,6 @@
 # Tresor-Import - The File Import of Tresor One
 
-This is the PDF and PP-CSV Import used on [tresor.one](https://tresor.one).
+This is the PDF and PP-CSV Import used on [rentablo.de](https://rentablo.de).
 
 ## Supported Brokers
 
@@ -9,13 +9,13 @@ All brokers supported by tresor-import are listed in the [documentation](docs/im
 ## Installation
 
 ```bash
-npm install @tresor.one/import
+npm install @rentablo/pdf-import
 ```
 
 ## Usage
 
 ```js
-import getActivities from '@tresor.one/import';
+import getActivities from '@rentablo/pdf-import';
 
 async fileHandler() {
   const results = await Promise.all(Array.from(this.$refs.myFiles.files).map(getActivities));
