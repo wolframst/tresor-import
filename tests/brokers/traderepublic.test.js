@@ -441,6 +441,28 @@ describe('Broker: Trade Republic', () => {
         fxRate: 1.21871,
       });
     });
+
+    it('Should map the pdf data correctly for: 2021_realty_income', () => {
+      const activities = traderepublic.parsePages(dividendSamples[11])
+        .activities;
+
+      expect(activities.length).toEqual(1);
+      expect(activities[0]).toEqual({
+        broker: 'traderepublic',
+        type: 'Dividend',
+        isin: 'US7561091049',
+        company: 'Realty Income Corp.',
+        date: '2021-06-15',
+        datetime: '2021-06-15T' + activities[0].datetime.substring(11),
+        amount: 5.41 / 1.2167,
+        price: 0.19332406616614434, // 0.235 / 1.2167
+        shares: 23,
+        tax: 0.44 + 0.03 + 0.81 / 1.2167,
+        fee: 0,
+        foreignCurrency: 'USD',
+        fxRate: 1.2167,
+      });
+    });
   });
 
   describe('Validate depotStatements', () => {
