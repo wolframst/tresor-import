@@ -30,10 +30,16 @@ const activityType = content => {
     case 'Rückzahlung':
       return 'Payback';
   }
-  if (content.includes('Depotbewertung') && !content[0].startsWith('Jahresdepotauszug')) {
+  if (
+    content.includes('Depotbewertung') &&
+    !content[0].startsWith('Jahresdepotauszug')
+  ) {
     return 'DepotStatement';
   }
-  if (content[0].startsWith('Depotauszug') || content[0].startsWith('Jahresdepotauszug')) {
+  if (
+    content[0].startsWith('Depotauszug') ||
+    content[0].startsWith('Jahresdepotauszug')
+  ) {
     return 'PostboxDepotStatement';
   }
 };
@@ -378,7 +384,7 @@ const parsePostboxDepotStatement = content => {
   let activities = [];
   let tmpdate;
 
-  if(!content[0].startsWith('Jahresdepotauszug')){
+  if (!content[0].startsWith('Jahresdepotauszug')) {
     if (content[0].split(' ')[2] == undefined) {
       return undefined;
     }
@@ -386,10 +392,7 @@ const parsePostboxDepotStatement = content => {
   } else {
     tmpdate = content[11];
   }
-  const [date, datetime] = createActivityDateTime(
-    tmpdate,
-    '23:59'
-  );
+  const [date, datetime] = createActivityDateTime(tmpdate, '23:59');
 
   while (idx >= 0) {
     let isinaddidx = 6;
