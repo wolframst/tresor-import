@@ -479,6 +479,27 @@ describe('Broker: ING', () => {
         foreignCurrency: 'HKD',
       });
     });
+
+    it('Can parse dividend in USD from Vanguard Em Markets', () => {
+      const activities = ing.parsePages(dividendsSamples[9]).activities;
+
+      expect(activities.length).toEqual(1);
+      expect(activities[0]).toEqual({
+        broker: 'ing',
+        type: 'Dividend',
+        date: '2021-02-03',
+        datetime: '2021-02-03T' + activities[0].datetime.substring(11),
+        isin: 'IE00BZ163L38',
+        company: 'Vang.USD Em.Mkts Gov.Bd U.ETF Registered Shares USD Dis.oN',
+        shares: 69.44685,
+        price: 0.193518 / 1.201095,
+        amount: 11.189789317248012, // 13.44 / 1.201095
+        fee: 0,
+        tax: 1.4 + 0.07 + 1.4 + 0.07,
+        fxRate: 1.201095,
+        foreignCurrency: 'USD',
+      });
+    });
   });
 
   describe('Payback', () => {
