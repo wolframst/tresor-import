@@ -237,10 +237,10 @@ const findTaxes = content => {
       continue;
     }
 
-    // Normaly the tax amount is in the line after the tax title
+    // Normally the tax amount is in the line after the tax title
     let offset = 2;
     if (line.endsWith('%')) {
-      offset = 2;
+      offset = content[lineNumber + 2] === 'EUR' ? 3 : 2;
     } else if (!line.endsWith('%') && !content[lineNumber + 2].endsWith('%')) {
       // but sometimes the line after contains only a %
       // Kapitalertragsteuer 25,00  // <- variable line

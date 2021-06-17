@@ -25,6 +25,7 @@ export const dividendSamples = [
   require('./dividend/2020_exxon_mobile_corp.json'),
   require('./dividend/2020_schlumberger.json'),
   require('./dividend/2021_reinvest_main_street_capital.json'),
+  require('./dividend/2021_realty_income.json'),
 ];
 
 export const depotStatement = [

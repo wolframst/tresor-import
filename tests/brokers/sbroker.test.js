@@ -1,6 +1,5 @@
 import { findImplementation } from '../../src';
 import * as sbroker from '../../src/brokers/sbroker';
-import Big from 'big.js';
 import {
   buySamples,
   sellSamples,
@@ -11,8 +10,6 @@ import {
 console.error = jest.fn();
 
 describe('Broker: sbroker', () => {
-  let multiPageResult;
-
   describe('Check all documents', () => {
     it('Can the document be parsed with sbroker', () => {
       allSamples.forEach(pages => {

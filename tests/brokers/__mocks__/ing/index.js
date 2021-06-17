@@ -27,6 +27,7 @@ export const dividendsSamples = [
   require('./dividend/iShares_dj_glob_titans_50_with_taxes.json'),
   require('./dividend/waste_management_with_taxes.json'),
   require('./dividend/HKD_byd_co_ltd_with_taxes.json'),
+  require('./dividend/2021_vang_usd_em_markets.json'),
 ];
 
 export const depotStatement = [
