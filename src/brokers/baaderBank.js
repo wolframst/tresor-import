@@ -20,6 +20,8 @@ const getDocumentType = content => {
     return 'Dividend';
   } else if (content.includes('Perioden-Kontoauszug: EUR-Konto')) {
     return 'AccountStatement';
+  } else if (content.includes('Rechnungsabschluss: EUR')) {
+    return 'AccountClearing';
   }
 };
 
@@ -32,7 +34,10 @@ const getBroker = content => {
     return 'oskar';
   }
 
-  if (content.some(line => line.includes('Scalable Capital Vermögensverw'))) {
+  if (
+    content.some(line => line.includes('Scalable Capital Vermögensverw')) ||
+    content.some(line => line.includes('www.scalable.capital'))
+  ) {
     return 'scalablecapital';
   }
 };
@@ -324,6 +329,10 @@ const parseAccountStatement = content => {
       type = 'Buy';
       amount = parseGermanNum(content[startIndex + 3]);
       companyLineNumber = startIndex + 5;
+    } else if (content[startIndex + 3] === 'Verkauf') {
+      type = 'Sell';
+      amount = parseGermanNum(content[startIndex + 2]);
+      companyLineNumber = startIndex + 4;
     } else if (content[startIndex + 3] === 'Coupons/Dividende') {
       type = 'Dividend';
       amount = parseGermanNum(content[startIndex + 2]);
@@ -368,10 +377,22 @@ export const parsePages = contents => {
   const content = contents.flat();
   const documentType = getDocumentType(content);
 
-  if (documentType === 'AccountStatement') {
-    activities.push(...parseAccountStatement(content));
-  } else if (['Buy', 'Sell', 'Dividend'].includes(documentType)) {
-    activities.push(parsePage(content, documentType));
+  switch (documentType) {
+    case 'AccountClearing':
+      return {
+        activities,
+        status: 7,
+      };
+
+    case 'AccountStatement':
+      activities.push(...parseAccountStatement(content));
+      break;
+
+    case 'Buy':
+    case 'Dividend':
+    case 'Sell':
+      activities.push(parsePage(content, documentType));
+      break;
   }
 
   return {

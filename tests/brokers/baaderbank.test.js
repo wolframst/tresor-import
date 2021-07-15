@@ -6,6 +6,7 @@ import {
   sellSamples,
   dividendSamples,
   accountSamples,
+  ignoredSamples,
 } from './__mocks__/baaderbank';
 
 describe('Broker: scalable.capital', () => {
@@ -279,6 +280,25 @@ describe('Broker: scalable.capital', () => {
         tax: 15.38,
       });
     });
+
+    test('Can the document can be parsed: 2021_scalable', () => {
+      const activities = baaderBank.parsePages(dividendSamples[3]).activities;
+
+      expect(activities.length).toEqual(1);
+      expect(activities[0]).toEqual({
+        broker: 'scalablecapital',
+        type: 'Dividend',
+        date: '2021-04-01',
+        datetime: '2021-04-01T' + activities[0].datetime.substring(11),
+        isin: 'IE00B3VVMM84',
+        company: 'Vanguard FTSE Em.Markets U.ETF Registered Shares USD Dis.oN',
+        shares: 9.222,
+        price: 0.09577568667344863,
+        amount: 0.88,
+        fee: 0,
+        tax: 0,
+      });
+    });
   });
 
   describe('Validate account statements', () => {
@@ -314,6 +334,38 @@ describe('Broker: scalable.capital', () => {
         amount: 20.96,
         fee: 0,
         tax: 0,
+      });
+    });
+
+    test('Can parse statement: 2021_scalable_sell_buy', () => {
+      const result = baaderBank.parsePages(accountSamples[1]);
+      expect(result.status).toEqual(0);
+
+      const activities = result.activities;
+      expect(activities.length).toEqual(6);
+
+      expect(activities[0]).toEqual({
+        broker: 'scalablecapital',
+        type: 'Sell',
+        date: '2021-04-07',
+        datetime: '2021-04-07T' + activities[0].datetime.substring(11),
+        isin: 'US86738R1086',
+        company: 'SUNHYDROGEN INC. DL -,001',
+        shares: 5000,
+        price: 0.1104,
+        amount: 552,
+        fee: 0,
+        tax: 0,
+      });
+    });
+  });
+
+  describe('Validate all ignored statements', () => {
+    test('All ignored statements return status 7 and no activities', () => {
+      ignoredSamples.forEach(pages => {
+        const result = baaderBank.parsePages(pages);
+        expect(result.status).toEqual(7);
+        expect(result.activities.length).toEqual(0);
       });
     });
   });
