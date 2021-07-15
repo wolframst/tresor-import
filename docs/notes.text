@@ -1,0 +1,4 @@
+Sync with master:
+get checkout master
+git fetch upstream
+git merge upstream/master
